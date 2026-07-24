@@ -1,0 +1,3568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4M 변동점 관리 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#eef1f7;color:#222;min-height:100vh}
+
+/* ── HEADER ── */
+.header{background:linear-gradient(135deg,#0d2b5e 0%,#1e5799 100%);color:#fff;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.header-left{display:flex;align-items:center;gap:14px}
+.header-logo{font-size:20px;font-weight:800;letter-spacing:-0.5px}
+.header-sub{font-size:12px;opacity:.75;background:rgba(255,255,255,.15);padding:2px 10px;border-radius:20px}
+.header-right{display:flex;align-items:center;gap:10px}
+.header-date{font-size:12px;opacity:.8}
+.bom-status{font-size:11px;background:rgba(255,255,255,.15);padding:3px 10px;border-radius:20px;display:flex;align-items:center;gap:6px}
+.bom-dot{width:8px;height:8px;border-radius:50%;background:#ef5350}
+.bom-dot.loaded{background:#66bb6a}
+
+/* ── LAYOUT ── */
+.layout{display:flex;min-height:calc(100vh - 62px);align-items:flex-start}
+
+/* ── SIDEBAR ── */
+.sidebar{width:190px;background:#fff;flex-shrink:0;display:flex;flex-direction:column;padding:14px 8px;gap:4px;box-shadow:2px 0 6px rgba(0,0,0,.06);transition:width .2s;position:sticky;top:62px;height:calc(100vh - 62px);overflow-y:auto}
+.sidebar.collapsed{width:50px}
+.sidebar.collapsed .nav-txt{display:none}
+.sidebar.collapsed .nav-btn{justify-content:center;padding:10px 0}
+.nav-btn{display:flex;align-items:center;gap:9px;padding:10px 12px;border:none;background:none;cursor:pointer;border-radius:6px;width:100%;text-align:left;font-size:13px;font-weight:700;color:#334155;border-left:4px solid transparent;transition:all .15s}
+.nav-btn:hover{background:#f4f7ff;color:#1e5799}
+.nav-btn.active{background:#eef3ff;color:#0d2b5e;border-left-color:#1e5799}
+.nav-icon{font-size:16px;flex-shrink:0}
+.sidebar-toggle{margin-top:auto;border:none;background:none;cursor:pointer;padding:8px;border-radius:6px;color:#94a3b8;font-size:18px;width:100%;text-align:center}
+.sidebar-toggle:hover{background:#f4f7ff;color:#1e5799}
+
+/* ── MAIN ── */
+.main{flex:1;padding:20px;overflow-x:auto;min-width:0}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ── STAT CARDS ── */
+.stat-row{display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.stat-card{background:#fff;border-radius:10px;padding:16px 20px;flex:1;min-width:140px;box-shadow:0 1px 4px rgba(0,0,0,.08);border-left:4px solid #ccc;text-align:center}
+.stat-card.blue{border-left-color:#1565c0}
+.stat-card.green{border-left-color:#2e7d32}
+.stat-card.orange{border-left-color:#e65100}
+.stat-card.red{border-left-color:#c62828}
+.stat-card.purple{border-left-color:#6a1b9a}
+.stat-num{font-size:30px;font-weight:800;line-height:1.1}
+.stat-lbl{font-size:12px;color:#64748b;margin-top:4px}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar-title{font-size:15px;font-weight:800;color:#0d2b5e;flex:1}
+.btn{padding:7px 16px;border:none;cursor:pointer;border-radius:6px;font-size:13px;font-weight:700;transition:all .15s}
+.btn-primary{background:#0d2b5e;color:#fff}
+.btn-primary:hover{background:#1e5799}
+.btn-outline{background:#fff;color:#1e5799;border:1.5px solid #1e5799}
+.btn-outline:hover{background:#eef3ff}
+.btn-sm-edit{background:#e3f2fd;color:#1565c0;padding:4px 10px;font-size:12px;border-radius:4px;border:none;cursor:pointer;font-weight:700}
+.btn-sm-del{background:#fce4ec;color:#c62828;padding:4px 10px;font-size:12px;border-radius:4px;border:none;cursor:pointer;font-weight:700}
+.btn-sm-edit:hover{background:#bbdefb}
+.btn-sm-del:hover{background:#f8bbd0}
+
+/* ── FILTER ROW ── */
+.filter-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filter-row select,.filter-row input{padding:6px 10px;border:1px solid #cdd5e0;border-radius:6px;font-size:13px;background:#fff}
+.filter-row select:focus,.filter-row input:focus{outline:none;border-color:#1e5799}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+table{border-collapse:collapse;width:100%;min-width:1100px}
+thead th{background:#0d2b5e;color:#fff;padding:10px 10px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center}
+tbody td{padding:8px 10px;font-size:12px;border-bottom:1px solid #e8eef8;vertical-align:middle;text-align:center}
+tbody tr:hover{background:#e8f0ff}
+tbody tr[onclick]:hover{background:#dbeafe}
+tfoot td{background:#0d2b5e;color:#fff;padding:8px 10px;font-size:12px;font-weight:700;text-align:center}
+.td-left{text-align:left}
+.td-wrap{max-width:180px;word-break:break-word;white-space:pre-wrap;text-align:left}
+
+/* ── SIGNAL ── */
+.signal{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.signal-wait{background:#fff3e0;color:#e65100}
+.signal-prog{background:#e3f2fd;color:#1565c0}
+.signal-done{background:#e8f5e9;color:#2e7d32}
+.signal-delay{background:#fce4ec;color:#c62828}
+.signal-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.signal-wait .signal-dot{background:#f57c00;box-shadow:0 0 5px #f57c00}
+.signal-prog .signal-dot{background:#1565c0;box-shadow:0 0 5px #1565c0}
+.signal-done .signal-dot{background:#2e7d32;box-shadow:0 0 5px #2e7d32}
+.signal-delay .signal-dot{background:#c62828;box-shadow:0 0 5px #c62828}
+
+/* ── 4M TYPE BADGES ── */
+.badge-man{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800}
+.badge-machine{background:#f3e5f5;color:#6a1b9a;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800}
+.badge-material{background:#fff8e1;color:#e65100;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800}
+.badge-method{background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800}
+
+/* ── PHOTO THUMB ── */
+.photo-thumb{width:54px;height:54px;object-fit:cover;border-radius:5px;cursor:zoom-in;transition:transform .15s,box-shadow .15s;border:1px solid #ddd}
+.photo-thumb:hover{transform:scale(1.08);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.no-photo{color:#bbb;font-size:11px}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;width:780px;max-width:96vw;max-height:92vh;overflow-y:auto;animation:modalIn .2s ease}
+@keyframes modalIn{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-header{background:#0d2b5e;color:#fff;padding:14px 20px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between}
+.modal-header h3{font-size:15px;font-weight:800}
+.modal-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;opacity:.8}
+.modal-close:hover{opacity:1;color:#ef9a9a}
+.modal-body{padding:22px}
+.modal-footer{padding:12px 22px 18px;display:flex;justify-content:flex-end;gap:10px}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-full{grid-column:1/-1}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:12px;font-weight:700;color:#334155}
+.form-label .req{color:#c62828;margin-left:2px}
+.form-control{padding:8px 10px;border:1px solid #cdd5e0;border-radius:6px;font-size:13px;font-family:inherit;transition:border .15s}
+.form-control:focus{outline:none;border-color:#1e5799;box-shadow:0 0 0 3px rgba(30,87,153,.1)}
+select.form-control{background:#fff;cursor:pointer}
+textarea.form-control{min-height:70px;resize:vertical}
+
+/* ── PHOTO UPLOAD ── */
+.photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.upload-box{border:2px dashed #cdd5e0;border-radius:8px;min-height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;background:#fafbfd}
+.upload-box:hover{border-color:#1e5799;background:#f0f5ff}
+.upload-box.has-img{border-style:solid;border-color:#1e5799}
+.upload-box.paste-target{border-color:#1565c0;background:#e3f2fd;box-shadow:0 0 0 3px rgba(21,101,192,.2)}
+.paste-target-label{font-size:11px;font-weight:800;color:#1565c0;margin-bottom:4px;height:16px}
+.upload-icon{font-size:28px;color:#94a3b8}
+.upload-label{font-size:12px;color:#64748b;margin-top:6px;text-align:center}
+.upload-input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.preview-img{max-width:100%;max-height:180px;object-fit:contain;border-radius:6px}
+.upload-remove{position:absolute;top:4px;right:4px;background:rgba(198,40,40,.85);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center}
+
+/* ── BOM UPLOAD AREA ── */
+.bom-upload-area{border:2px dashed #1e5799;border-radius:10px;padding:40px;text-align:center;cursor:pointer;transition:all .15s;background:#f0f5ff;position:relative;margin-bottom:18px}
+.bom-upload-area:hover{background:#e3f2fd}
+.bom-upload-area.drag{background:#dbeafe;border-color:#1565c0}
+.bom-upload-icon{font-size:40px;color:#1e5799;margin-bottom:10px}
+.bom-upload-txt{font-size:15px;font-weight:800;color:#0d2b5e}
+.bom-upload-sub{font-size:12px;color:#64748b;margin-top:4px}
+.bom-upload-input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+/* ── BOM TABLE ── */
+.bom-info-card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:14px}
+.bom-info-title{font-size:13px;font-weight:800;color:#0d2b5e;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+
+/* ── PHOTO VIEWER ── */
+.photo-viewer{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:2000;align-items:center;justify-content:center;cursor:zoom-out}
+.photo-viewer.open{display:flex}
+.photo-viewer img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:6px}
+
+/* ── CONFIRM MODAL ── */
+.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1500;align-items:center;justify-content:center}
+.confirm-overlay.open{display:flex}
+.confirm-box{background:#fff;border-radius:10px;width:360px;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden}
+.confirm-hd{background:#c62828;color:#fff;padding:14px 18px;font-weight:800;font-size:14px}
+.confirm-bd{padding:18px;font-size:13px;line-height:1.6;color:#334155}
+.confirm-ft{padding:10px 18px 16px;display:flex;justify-content:flex-end;gap:8px}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:28px;right:28px;background:#0d2b5e;color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:700;z-index:3000;transform:translateY(80px);opacity:0;transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* ── SECTION TITLE ── */
+.section-title{font-size:13px;font-weight:800;color:#0d2b5e;border-left:4px solid #1e5799;padding-left:10px;margin:18px 0 10px}
+
+/* ── DETAIL VIEW ── */
+.detail-info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.detail-field{background:#f4f7fc;border-radius:6px;padding:10px 14px}
+.detail-field label{font-size:11px;color:#64748b;font-weight:700;display:block;margin-bottom:3px}
+.detail-field .val{font-size:13px;font-weight:700;color:#0d2b5e}
+.detail-txt-box{background:#f8f9fc;border-radius:6px;padding:10px 14px;min-height:60px;font-size:13px;white-space:pre-wrap;line-height:1.6}
+.detail-photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.detail-photo-grid img{width:100%;max-height:280px;object-fit:contain;border-radius:6px;border:1px solid #ddd;cursor:zoom-in}
+
+/* ── 파일 업로드 탭 카드 ── */
+.upload-card-wrap{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.upload-card{position:relative;border:2px dashed #c8d6e5;border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;min-width:200px;max-width:260px;background:#fff}
+.upload-card:hover{border-color:#1e5799;background:#f4f7ff}
+.upload-card.loaded{border-style:solid;border-color:#2e7d32;background:#f0faf4}
+.upload-card.drag{border-color:#1565c0;background:#dbeafe;transform:scale(1.02)}
+.upload-card input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-card-icon{font-size:36px;margin-bottom:10px}
+.upload-card-label{font-size:14px;font-weight:800;color:#0d2b5e;margin-bottom:4px}
+.upload-card-desc{font-size:11px;color:#64748b;margin-bottom:10px}
+.upload-card-status{font-size:12px;color:#94a3b8;font-weight:600}
+.upload-card.loaded .upload-card-status{color:#2e7d32}
+.upload-card-time{font-size:10px;color:#94a3b8;margin-top:4px}
+
+
+/* ── LETTER TAB ── */
+.letter-wrap{max-width:1000px;margin:0 auto;padding:0 4px}
+.letter-cover{background:#fff;border-radius:10px;padding:28px 32px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.08);border-left:5px solid #0d2b5e}
+.letter-cover h2{font-size:18px;font-weight:800;color:#0d2b5e;margin-bottom:14px;text-align:center}
+.letter-cover p{font-size:13px;line-height:1.9;color:#334155;margin-bottom:4px}
+.letter-sec{background:#fff;border-radius:10px;padding:20px 24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.letter-sec h3{font-size:14px;font-weight:800;color:#0d2b5e;border-left:4px solid #1e5799;padding-left:10px;margin-bottom:14px}
+.letter-sec h4{font-size:13px;font-weight:700;color:#1e5799;margin:12px 0 8px}
+.letter-sec p{font-size:12px;line-height:1.8;color:#334155;margin-bottom:4px}
+.letter-sec ul{padding-left:18px;margin-bottom:8px}
+.letter-sec li{font-size:12px;line-height:1.8;color:#334155}
+.letter-tbl{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+.letter-tbl th{background:#0d2b5e;color:#fff;padding:6px 8px;text-align:center;border:1px solid #1e5799;font-weight:700;white-space:nowrap}
+.letter-tbl td{padding:5px 8px;border:1px solid #dde3ee;vertical-align:middle;line-height:1.5}
+.letter-tbl tr:nth-child(even){background:#f8fafc}
+.letter-tbl .lbl-gate{background:#1565c0;color:#fff;font-weight:800;text-align:center;white-space:nowrap}
+.letter-tbl .lbl-major{background:#6a1b9a;color:#fff;font-weight:800;text-align:center;white-space:nowrap}
+.letter-tbl .lbl-simple{background:#e65100;color:#fff;font-weight:800;text-align:center;white-space:nowrap}
+.letter-tbl .lbl-self{background:#2e7d32;color:#fff;font-weight:800;text-align:center;white-space:nowrap}
+.letter-tbl .m4-man{background:#e3f2fd;color:#1565c0;font-weight:700;text-align:center}
+.letter-tbl .m4-machine{background:#f3e5f5;color:#6a1b9a;font-weight:700;text-align:center}
+.letter-tbl .m4-material{background:#fff8e1;color:#e65100;font-weight:700;text-align:center}
+.letter-tbl .m4-method{background:#e8f5e9;color:#2e7d32;font-weight:700;text-align:center}
+.letter-tbl .m4-all{background:#fff9c4;color:#f57f17;font-weight:700;text-align:center}
+.lang-toggle{display:flex;gap:8px;margin-bottom:16px}
+.note-red{color:#c62828;font-weight:700;font-size:12px;margin:6px 0}
+
+/* ── MULTI PHOTO ── */
+.multi-photo-section{border:2px dashed #cdd5e0;border-radius:8px;padding:10px;min-height:90px;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;background:#fafbfd}
+.multi-photo-section:hover{border-color:#1e5799;background:#f0f5ff}
+.multi-photo-section.paste-target{border-color:#1565c0;background:#e3f2fd;box-shadow:0 0 0 3px rgba(21,101,192,.2)}
+.multi-photo-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.multi-thumb{position:relative;width:72px;height:72px;flex-shrink:0}
+.multi-thumb img{width:100%;height:100%;object-fit:cover;border-radius:5px;cursor:zoom-in;border:1px solid #ddd;transition:transform .15s}
+.multi-thumb img:hover{transform:scale(1.05)}
+.multi-thumb .mth-del{position:absolute;top:-5px;right:-5px;background:rgba(198,40,40,.9);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0;display:flex;align-items:center;justify-content:center}
+.add-photo-lbl{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#f0f5ff;border:1.5px dashed #1e5799;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;color:#1e5799;transition:all .15s}
+.add-photo-lbl:hover{background:#e3f2fd;border-color:#1565c0}
+/* ── PHOTO VIEWER NAV ── */
+.pv-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;font-size:28px;cursor:pointer;padding:8px 14px;border-radius:6px;z-index:10;transition:background .15s}
+.pv-nav:hover{background:rgba(255,255,255,.35)}
+.pv-counter{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;font-weight:700;background:rgba(0,0,0,.4);padding:3px 12px;border-radius:20px}
+
+/* ── ATTACH ── */
+.attach-list{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.attach-item{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px}
+.attach-item span.att-name{flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#334155}
+.attach-item span.att-size{font-size:11px;color:#94a3b8;flex-shrink:0}
+.attach-item button.att-del{background:none;border:none;cursor:pointer;color:#c62828;font-size:16px;line-height:1;padding:0 2px;flex-shrink:0}
+.attach-upload-label{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#f0f5ff;border:1.5px dashed #1e5799;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;color:#1e5799;transition:all .15s}
+.attach-upload-label:hover{background:#e3f2fd;border-color:#1565c0}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#f1f5f9}
+::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#64748b}
+
+/* ── EMPTY ── */
+.empty-row td{color:#94a3b8;font-style:italic;padding:28px;text-align:center}
+
+/* ── CHART ── */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.chart-card{background:#fff;border-radius:10px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.chart-title{font-size:13px;font-weight:800;color:#0d2b5e;margin-bottom:14px}
+.bar-wrap{display:flex;flex-direction:column;gap:8px}
+.bar-item{display:flex;align-items:center;gap:10px}
+.bar-label{font-size:12px;font-weight:700;width:60px;flex-shrink:0;color:#334155}
+.bar-track{flex:1;background:#eef1f7;border-radius:4px;height:18px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s;display:flex;align-items:center;padding-left:6px;font-size:10px;font-weight:800;color:#fff}
+.bar-val{font-size:12px;font-weight:800;color:#334155;width:28px;text-align:right}
+.bar-man{background:#1565c0}
+.bar-machine{background:#6a1b9a}
+.bar-material{background:#e65100}
+.bar-method{background:#2e7d32}
+
+/* ── VIEW TOGGLE ── */
+.view-toggle-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border:1.5px solid rgba(255,255,255,.35);border-radius:16px;background:rgba(255,255,255,.1);color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s}
+.view-toggle-btn:hover{background:rgba(255,255,255,.22)}
+.hamburger-btn{display:none;align-items:center;justify-content:center;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:4px 6px;line-height:1;flex-shrink:0}
+
+/* ── SIDEBAR OVERLAY ── */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:290}
+.sidebar-overlay.open{display:block}
+
+/* ── BOTTOM NAV ── */
+.m-bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;z-index:299;box-shadow:0 -2px 8px rgba(0,0,0,.1)}
+.m-bottom-nav-scroll{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.m-bottom-nav-scroll::-webkit-scrollbar{display:none}
+.m-nav-item2{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 14px;border:none;background:none;cursor:pointer;color:#94a3b8;font-size:10px;font-weight:700;min-width:58px;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:color .15s}
+.m-nav-item2.active{color:#0d2b5e}
+.m-nav-item2 .mni{font-size:18px;line-height:1}
+
+/* ── MOBILE MODE (triggered by .view-mobile class OR small screen) ── */
+body.view-mobile .hamburger-btn,
+body.view-mobile .hamburger-btn{display:flex}
+body.view-mobile .header-sub{display:none}
+body.view-mobile .header{height:52px}
+body.view-mobile .sidebar{transform:translateX(-200px);position:fixed;top:52px;left:0;height:calc(100vh - 52px);width:220px !important;z-index:295;transition:transform .25s cubic-bezier(.4,0,.2,1);box-shadow:none}
+body.view-mobile .sidebar.drawer-open{transform:translateX(0);box-shadow:4px 0 20px rgba(0,0,0,.18)}
+body.view-mobile .sidebar.collapsed{width:220px !important;transform:translateX(-220px)}
+body.view-mobile .sidebar.collapsed.drawer-open{transform:translateX(0)}
+body.view-mobile .sidebar .nav-txt{display:inline !important}
+body.view-mobile .sidebar .nav-btn{justify-content:flex-start !important;padding:12px 16px !important}
+body.view-mobile .sidebar-toggle{display:none}
+body.view-mobile .layout{min-height:calc(100vh - 52px);align-items:stretch}
+body.view-mobile .main{padding:12px;padding-bottom:76px}
+body.view-mobile .m-bottom-nav{display:block}
+body.view-mobile .sidebar-overlay.open{display:block}
+body.view-mobile .form-grid{grid-template-columns:1fr !important}
+body.view-mobile .detail-info-grid{grid-template-columns:1fr 1fr !important}
+body.view-mobile .photo-grid{grid-template-columns:1fr !important}
+body.view-mobile .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+body.view-mobile .modal{width:100% !important;max-width:100% !important;max-height:100% !important;min-height:100%;border-radius:0 !important;display:flex;flex-direction:column}
+body.view-mobile .modal-overlay.open{align-items:stretch}
+body.view-mobile .modal-body{flex:1;overflow-y:auto}
+body.view-mobile .modal-footer{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+body.view-mobile .filter-row{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+body.view-mobile .filter-row::-webkit-scrollbar{display:none}
+body.view-mobile .toolbar{flex-wrap:nowrap;overflow-x:auto}
+body.view-mobile .toolbar::-webkit-scrollbar{display:none}
+body.view-mobile .toast{bottom:76px;right:14px}
+body.view-mobile .confirm-box{width:calc(100vw - 32px)}
+
+@media (max-width:768px) {
+  .hamburger-btn{display:flex}
+  .header-sub{display:none}
+  .header{height:52px}
+  .sidebar{transform:translateX(-220px);position:fixed;top:52px;left:0;height:calc(100vh - 52px);width:220px !important;z-index:295;transition:transform .25s cubic-bezier(.4,0,.2,1);box-shadow:none}
+  .sidebar.drawer-open{transform:translateX(0);box-shadow:4px 0 20px rgba(0,0,0,.18)}
+  .sidebar.collapsed{width:220px !important;transform:translateX(-220px)}
+  .sidebar.collapsed.drawer-open{transform:translateX(0)}
+  .sidebar .nav-txt{display:inline !important}
+  .sidebar .nav-btn{justify-content:flex-start !important;padding:12px 16px !important}
+  .sidebar-toggle{display:none}
+  .layout{min-height:calc(100vh - 52px);align-items:stretch}
+  .main{padding:12px;padding-bottom:76px}
+  .m-bottom-nav{display:block}
+  .sidebar-overlay.open{display:block}
+  .form-grid{grid-template-columns:1fr !important}
+  .detail-info-grid{grid-template-columns:1fr 1fr !important}
+  .photo-grid{grid-template-columns:1fr !important}
+  .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .modal{width:100% !important;max-width:100% !important;max-height:100% !important;min-height:100%;border-radius:0 !important;display:flex;flex-direction:column}
+  .modal-overlay.open{align-items:stretch}
+  .modal-body{flex:1;overflow-y:auto}
+  .filter-row{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+  .filter-row::-webkit-scrollbar{display:none}
+  .toolbar{flex-wrap:nowrap;overflow-x:auto}
+  .toolbar::-webkit-scrollbar{display:none}
+  .toast{bottom:76px;right:14px}
+  .confirm-box{width:calc(100vw - 32px)}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleDrawer()">☰</button>
+    <div class="header-logo">🔄 4M 변동점 관리 대시보드</div>
+    <div class="header-sub">Man · Machine · Material · Method</div>
+  </div>
+  <div class="header-right">
+    <div class="bom-status" style="display:none">
+      <div class="bom-dot" id="bomDot"></div>
+      <span id="bomStatusTxt">BOM 미로드</span>
+    </div>
+    <div class="header-date" id="headerDate"></div>
+    <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleViewMode()">📱 모바일</button>
+  </div>
+</div>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeDrawer()"></div>
+
+<!-- BOTTOM NAV (mobile) -->
+<nav class="m-bottom-nav">
+  <div class="m-bottom-nav-scroll">
+    <button class="m-nav-item2" id="mnav-letter"   onclick="showTab('letter');closeDrawer()"><span class="mni">📋</span>4M공문</button>
+    <button class="m-nav-item2 active" id="mnav-overview" onclick="showTab('overview');closeDrawer()"><span class="mni">📊</span>종합현황</button>
+    <button class="m-nav-item2" id="mnav-history"  onclick="showTab('history');closeDrawer()"><span class="mni">📋</span>이력</button>
+    <button class="m-nav-item2" id="mnav-model"    onclick="showTab('model');closeDrawer()"><span class="mni">🗂️</span>모델별</button>
+    <button class="m-nav-item2" id="mnav-customer"   onclick="showTab('customer');closeDrawer()"><span class="mni">🏢</span>고객사별</button>
+    <button class="m-nav-item2" id="mnav-reportstd" onclick="showTab('reportstd');closeDrawer()"><span class="mni">📑</span>신고기준별</button>
+    <button class="m-nav-item2" id="mnav-upload"    onclick="showTab('upload');closeDrawer()"><span class="mni">📂</span>업로드</button>
+  </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <button class="nav-btn" onclick="showTab('letter')" id="nav-letter">
+      <span class="nav-icon">📋</span><span class="nav-txt">4M 공문</span>
+    </button>
+    <button class="nav-btn active" onclick="showTab('overview')" id="nav-overview">
+      <span class="nav-icon">📊</span><span class="nav-txt">종합현황</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('history')" id="nav-history">
+      <span class="nav-icon">📋</span><span class="nav-txt">변동점 이력</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('model')" id="nav-model">
+      <span class="nav-icon">🗂️</span><span class="nav-txt">모델별 변동점 관리</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('customer')" id="nav-customer">
+      <span class="nav-icon">🏢</span><span class="nav-txt">고객사별 변동점 관리</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('reportstd')" id="nav-reportstd">
+      <span class="nav-icon">📑</span><span class="nav-txt">신고/처리기준별 관리</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('upload')" id="nav-upload">
+      <span class="nav-icon">📂</span><span class="nav-txt">파일 업로드</span>
+    </button>
+    <button class="sidebar-toggle" onclick="toggleSidebar()">◀</button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+
+    <!-- ═══ TAB: 4M 공문 ═══ -->
+    <div class="tab-panel" id="tab-letter" style="display:none">
+      <div class="lang-toggle">
+        <button class="btn btn-primary" id="btnLangKo" onclick="switchLetterLang('ko')">한국어</button>
+        <button class="btn btn-outline" id="btnLangEn" onclick="switchLetterLang('en')">English</button>
+      </div>
+
+      <!-- ── 한국어 ── -->
+      <div id="letterKo" class="letter-wrap">
+
+        <!-- 공문 표지 -->
+        <div class="letter-cover">
+          <h2>📋 부품 협력회사 4M 변경 신고 안내</h2>
+          <p><strong>수신 :</strong> VS 스마트 사업부 협력회사 대표이사</p>
+          <p style="margin-top:12px">귀사의 일익 번창하심을 축원합니다.</p>
+          <p>LG전자 제품의 품질 경쟁력 향상을 위한 귀사의 노력과 협력에 감사드립니다.</p>
+          <p>4M의 임의 변경으로 인한 품질 사고 예방 및 품질 관리를 위해 다음과 같이 안내의 말씀을 드립니다.</p>
+          <p>4M 변경 사항에 대해서는 철저한 품질 검증 절차를 거쳐야만 예상치 못한 대형 품질 사고를 사전에 예방할 수 있다는 점을 충분히 이해하시고, 제품의 품질관리를 부탁드립니다.</p>
+          <p style="margin-top:16px;text-align:right"><strong>2024년 12월 19일</strong></p>
+          <p style="text-align:right">글로벌 오퍼레이션 센터장 &nbsp;/&nbsp; 품질 센터장</p>
+        </div>
+
+        <!-- 1. 일반 부품 -->
+        <div class="letter-sec">
+          <h3>1. 4M 변경 신고 대상 등급 (일반 부품)</h3>
+          <div style="overflow-x:auto">
+          <table class="letter-tbl">
+            <thead><tr><th>신고/처리기준</th><th>4M 분류</th><th>No</th><th>항목</th><th>변경내용</th><th>비고</th></tr></thead>
+            <tbody>
+              <tr><td class="lbl-gate" rowspan="3">4M Gate</td><td class="m4-all" rowspan="3">All</td><td>1</td><td>생산지 변경</td><td>기존 생산지(공장) 변경 (반도체, 2차 협력사는 중요 4M 처리)</td><td></td></tr>
+              <tr><td>2</td><td>라인 신설 / 복수 설치</td><td>생산 라인 신설/복수 설치 (반도체, 2차협력사는 중요 4M 처리)</td><td></td></tr>
+              <tr><td>3</td><td>협력사 공정 내재화</td><td>협력사 일부 공정 사내화 (반도체, 2차 협력사는 중요 4M 처리)</td><td></td></tr>
+              <tr><td class="lbl-major" rowspan="27">중요 4M</td><td class="m4-machine" rowspan="8">Machine</td><td>4</td><td>금형 신작 / 증작 / 대체 금형 제작</td><td>금형 신작, 2호/대체 금형 제작</td><td rowspan="8">사출기, 프레스 설비, 용접기, 융착기, 압출기, 인발기, 진공성형기, 발포기, 코팅 설비, 자삽기, SMT, 솔더링, 건조로, 열처리기 등</td></tr>
+              <tr><td>5</td><td>금형 성형부 개조</td><td>성형부 개조, Punch &amp; die, Core 교환 시 적용</td></tr>
+              <tr><td>6</td><td>금형 이관</td><td>업체 간 금형 이관 후 적용</td></tr>
+              <tr><td>7</td><td>신규 생산설비 설치</td><td>신규 생산 설비의 설치 시 적용</td></tr>
+              <tr><td>8</td><td>생산설비 이동</td><td>협력사 생산 설비가 이전/수리 등의 목적으로 공장 외로 이동하였을 경우</td></tr>
+              <tr><td>9</td><td>생산설비 변경</td><td>용량 증대, 구조 변경에 의한 설비 개조 (Retrofit, Overhaul 등)</td></tr>
+              <tr><td>10</td><td>생산 지그 (제조공정 전용)</td><td>생산용 지그의 신규 제작 시 적용</td></tr>
+              <tr><td>11</td><td>측정기 (검사 설비 / 지그)</td><td>검사 설비/지그 신규 제작/삭제 시 적용</td></tr>
+              <tr><td class="m4-material" rowspan="15">Material</td><td>12</td><td>Assembly (기구/회로) 특성 변경</td><td>특성(구조/성능/외관) 변경</td><td></td></tr>
+              <tr><td>13</td><td>Assembly (기구/회로) 금형</td><td>구성 부품의 금형 신작/개조</td><td></td></tr>
+              <tr><td>14</td><td>Assembly (기구/회로) 재질</td><td>구성 부품의 Material 변경</td><td></td></tr>
+              <tr><td>15</td><td>Assembly (기구/회로) 등급</td><td>구성 부품의 Grade 변경</td><td></td></tr>
+              <tr><td>16</td><td>Assembly (기구/회로) 유해물질</td><td>구성 부품의 유해물질 변경</td><td></td></tr>
+              <tr><td>17</td><td>Assembly (기구/회로) 가공</td><td>구성 부품의 가공 방법 변경</td><td></td></tr>
+              <tr><td>18</td><td>Assembly (기구/회로) 구매처</td><td>구성 부품의 구입선 변경</td><td></td></tr>
+              <tr><td>19</td><td>Assembly (기구/회로) 규격</td><td>규격 만료/취소 통보</td><td></td></tr>
+              <tr><td>20</td><td>부자재 변경1</td><td>제품에 직접 사용하는 부자재 변경 (방청제, 가공유, 세척제, 용제(Flux), 이형제, 보호비닐 등)</td><td></td></tr>
+              <tr><td>21</td><td>부자재 변경2</td><td>용접용 Gas, 4대 금지 물질 (Foam, 그리스, 양면Tape, 접착제)</td><td></td></tr>
+              <tr><td>22</td><td>원자재 변경</td><td>메이커, 재질, 물성, 두께, 강도, 치수, 온도특성, 연신율, 화학성분, 유해물질 등의 변경 시 적용</td><td></td></tr>
+              <tr><td>23</td><td>원자재 : Scrap 비율</td><td>원자재 : Scrap 사용 비율 변경 시 적용</td><td></td></tr>
+              <tr><td>24</td><td>원자재 색상</td><td>원자재를 사용한 색상 처리 방법이 변경될 경우 적용</td><td></td></tr>
+              <tr><td>25</td><td>원자재 표면처리</td><td>원자재를 사용한 표면처리/도금/도장 방식의 변경 시 적용</td><td></td></tr>
+              <tr><td>26</td><td>원자재 구매처</td><td>원자재의 구입처 변경 시 (Grade 동일)</td><td></td></tr>
+              <tr><td class="m4-method" rowspan="4">Method</td><td>27</td><td>검사 삭제</td><td>수입/공정/출하 검사 항목 및 조건 삭제 시 적용</td><td></td></tr>
+              <tr><td>28</td><td>공법 변경</td><td>주/단조, 도금, 열처리, 프레스, 사출, 접착, 용접, 도장, 절삭, 압입, 조립, 납땜, 씰링 등의 제조 공법 변경</td><td></td></tr>
+              <tr><td>29</td><td>하위 협력사 변경</td><td>양산 중인 하위 협력사에 대해 신규 혹은 변경하여 적용 시</td><td></td></tr>
+              <tr><td>30</td><td>하위 협력사 외주화</td><td>내재화한 공정을 하위 협력사로 외주화 (Outsourcing) 시 적용</td><td></td></tr>
+              <tr><td class="lbl-simple" rowspan="22">단순 4M</td><td class="m4-man" rowspan="3">Man</td><td>31</td><td>유해물질 관리인원</td><td>친환경 담당자/유해물질 검사원 변경 시 적용</td><td></td></tr>
+              <tr><td>32</td><td>품질 책임자</td><td>당 협력사 품질 책임자 변경 시 적용</td><td></td></tr>
+              <tr><td>33</td><td>대형 인원 변동</td><td>생산라인 작업자 50% 이상의 인원 과반수 변동 시 적용</td><td></td></tr>
+              <tr><td class="m4-machine" rowspan="10">Machine</td><td>34</td><td>설비 공구 변경</td><td>설비 내 공구의 변경 시 적용 (가공, 조립, 전극 등)</td><td rowspan="10">사출기, 프레스 설비, 용접기, 융착기, 압출기, 인발기, 진공성형기, 발포기, 코팅 설비, 자삽기, SMT, 솔더링, 건조로, 열처리기 등</td></tr>
+              <tr><td>35</td><td>작업 공구 변경</td><td>전용 작업 시 사용하는 공구가 변경될 경우 적용</td></tr>
+              <tr><td>36</td><td>생산설비 복수설치</td><td>기 생산 중인 설비의 동일 기종 복수 설치 시 적용</td></tr>
+              <tr><td>37</td><td>생산설비 단순이동</td><td>기존 사용 중인 설비 및 관련 공정의 동일 공간 내 단순 이동 시 적용</td></tr>
+              <tr><td>38</td><td>유휴 장비 적용</td><td>특정 사유로 인해 6개월 이상 미사용된 유휴 장비 재사용 시 적용</td></tr>
+              <tr><td>39</td><td>생산용 지그 (제조공정 전용)</td><td>복수 제작</td></tr>
+              <tr><td>40</td><td>생산용 지그 (제조공정 전용)</td><td>생산용 지그 개조</td></tr>
+              <tr><td>41</td><td>측정기 (검사 설비 / 지그)</td><td>측정기 개조/복수 제작/수리</td></tr>
+              <tr><td>42</td><td>측정기 (검사 설비 / 지그)</td><td>자동 계측기 변경 (리크테스터, 완성검사기 등)</td></tr>
+              <tr><td>43</td><td>측정기 (검사 설비 / 지그)</td><td>수동 계측기 변경 (Air Micrometer 등)</td></tr>
+              <tr><td class="m4-material">Material</td><td>44</td><td>부자재</td><td>제품에 직접 사용하는 방청제, 가공유, 세척제, 용제(Flux), 이형제, 보호비닐 등 부자재 용량 변경</td><td></td></tr>
+              <tr><td class="m4-method" rowspan="8">Method</td><td>45</td><td>검사 추가</td><td>수입/공정/출하 검사방법 및 조건 추가</td><td></td></tr>
+              <tr><td>46</td><td>검사 변경</td><td>수입/공정/출하 검사방법 및 조건 변경</td><td></td></tr>
+              <tr><td>47</td><td>공정 조정</td><td>동일 공간 내 공정의 통합, 폐기, 순서변경, 레이아웃 변경 시 적용</td><td></td></tr>
+              <tr><td>48</td><td>단순 라인 이동</td><td>공장의 동일 공간 내 검사 설비가 없는 라인을 대상으로 설비/지그 등의 변경이 없이 라인 합리화를 위한 단순이동 시 적용</td><td></td></tr>
+              <tr><td>49</td><td>물류 변경</td><td>조달되는 부품의 운반 공급체계/방법 변경 시 적용 (공동물류, 서열납품, 중간창고 운영 등)</td><td></td></tr>
+              <tr><td>50</td><td>포장 방법</td><td>포장 사양 및 방법의 변경 시 적용 (대차, Tray, Boxing 형상 및 재질 변경 등)</td><td></td></tr>
+              <tr><td>51</td><td>설비 조건</td><td>제조 설비의 설비 조건이 변경될 경우 (기준 세팅값, 작업 순서, Cycle Time 등)</td><td></td></tr>
+              <tr><td>52</td><td>작업 방법</td><td>특정 사유로 인해 단위 공정 내 작업 방법이 변경될 경우 적용</td><td></td></tr>
+              <tr><td class="lbl-self" rowspan="9">미신고<br>(협력사 관리)</td><td class="m4-man" rowspan="4">Man</td><td>53</td><td>작업자 변경</td><td>일반 공정 작업자 변경 시 적용</td><td></td></tr>
+              <tr><td>54</td><td>외국인 작업자 / 신입 / 검사원 변동</td><td>생산 시 외국인 작업자 투입 / 신입사원 / 검사원 변경 시 적용</td><td></td></tr>
+              <tr><td>55</td><td>주요 공정 작업자 변경</td><td>주요 / 특수 공정 작업자 변경 (용접 / Soldering / 수도장 공정 등) 시 적용</td><td></td></tr>
+              <tr><td>56</td><td>외주 품질 담당자 변경</td><td>2,3차 협력사 품질 책임자 변경 시 적용</td><td></td></tr>
+              <tr><td class="m4-machine" rowspan="5">Machine</td><td>57</td><td>공구 교환</td><td>기존 사용하던 공구와 동일한 공구로 교환 시 적용</td><td rowspan="5">사출기, 프레스 설비, 용접기, 융착기, 압출기, 인발기, 진공성형기, 발포기, 코팅 설비, 자삽기, SMT, 솔더링, 건조로, 열처리기 등</td></tr>
+              <tr><td>58</td><td>금형 유지보수</td><td>수리/Spare part 교환 시 적용</td></tr>
+              <tr><td>59</td><td>생산설비 유지보수</td><td>수리/Spare Part 교환 (기존 설비조건 유지) 시 적용</td></tr>
+              <tr><td>60</td><td>생산용 지그 유지보수</td><td>수리/Spare part 교환 시 적용</td></tr>
+              <tr><td>61</td><td>일반 계측기</td><td>일반 계측기 변경/교환 시 적용</td></tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+
+        <!-- 2. 반도체 부품 -->
+        <div class="letter-sec">
+          <h3>2. 4M 변경 신고 대상 등급 (반도체 부품)</h3>
+          <p>반도체 부품의 4M Gate는 중요 4M으로 처리</p>
+          <p class="note-red">◈ 반도체 협력사 4M 변경 대상 구분 기준 (반도체 부품 / 협력사 적용)</p>
+          <p>전장용 반도체 부품 (AEC-Q100/1/2/3/4, Q200)의 경우, ZVEI에서 제공하는 PCN - Delta Qualification Matrix를 참조한다.</p>
+          <p>비전장 (Non-Automotive) 반도체 부품의 경우는 LG(10)-A-9038 전사 반도체부품 인증제 업무 기준을 따른다.</p>
+        </div>
+
+        <!-- 3. 교육 요건 -->
+        <div class="letter-sec">
+          <h3>3. 협력업체 품질 책임자 변경 시 승인을 위한 교육 요건</h3>
+          <p><strong>실시 목적 :</strong> LG전자 VS사업본부 협력업체 품질 책임자 변경 시 변동 인원 인적 역량을 적기 확보하여 품질 Risk 사전 방지</p>
+          <p><strong>적용 대상 :</strong> 협력업체 품질 총 책임자 및 친환경 담당자, 유해물질 검사원</p>
+          <p><strong>승인 절차 :</strong> 품질 인원 변경 신고 후 승인 전 모든 교육을 수료하고 수료증 등의 결과물을 4M 승인 서류 내에 포함하여 제출</p>
+          <p>→ 아래의 업무 흐름을 참고하여 LG전자의 VS사업본부 협력사 변경 관리 기준의 "단순4M" 신고/처리기준에 준해 처리</p>
+          <div style="overflow-x:auto;margin:10px 0">
+          <table class="letter-tbl">
+            <thead><tr><th>구분</th><th>변경사항</th><th>협력사 자체 관리</th><th>LG승인 (단순)</th><th>LG승인 (중요)</th><th>4M Gate</th></tr></thead>
+            <tbody>
+              <tr><td class="m4-man" rowspan="6">Man</td><td>일반 공정 작업자 변경(외국인/신입사원)</td><td style="text-align:center">●</td><td></td><td></td><td></td></tr>
+              <tr><td>주요/특수 공정 작업자 변경</td><td style="text-align:center">●</td><td></td><td></td><td></td></tr>
+              <tr><td>검사원 변경</td><td style="text-align:center">●</td><td></td><td></td><td></td></tr>
+              <tr><td>친환경 담당자 / 유해물질 검사원 변경</td><td></td><td style="text-align:center">●</td><td></td><td></td></tr>
+              <tr><td>협력사 품질 책임자 변경</td><td></td><td style="text-align:center">●</td><td></td><td></td></tr>
+              <tr><td>2,3차 협력사 품질책임자 변경</td><td style="text-align:center">●</td><td></td><td></td><td></td></tr>
+            </tbody>
+          </table>
+          </div>
+          <h4>대상 교육</h4>
+          <div style="overflow-x:auto">
+          <table class="letter-tbl">
+            <thead><tr><th>No.</th><th>교육명</th><th>적용대상</th><th>구분</th><th>비고</th></tr></thead>
+            <tbody>
+              <tr><td style="text-align:center">1</td><td>품질 관리 심화 과정</td><td>전체</td><td>필수</td><td>전사 협력업체 필수 교육</td></tr>
+              <tr><td style="text-align:center">2</td><td>자동차 개발 프로세스 APQP 과정</td><td>협력업체 품질 총 책임자</td><td>2, 3번 중 택일</td><td>자동차 산업 특화</td></tr>
+              <tr><td style="text-align:center">3</td><td>자동차 핵심 Core tool 과정</td><td></td><td></td><td></td></tr>
+              <tr><td style="text-align:center">4</td><td>유해물질 측정 실무자 과정</td><td>협력업체 친환경 담당자 / 유해물질 검사원</td><td>필수</td><td>유해물질 측정 실무 교육</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <p style="margin-top:10px"><strong>이수 방법 :</strong> LG전자 국가인적자원개발 컨소시엄 협약 여부 확인 후 수강 신청, 이수</p>
+          <p>교육 사이트 : <strong>https://hrd.lge.com</strong></p>
+          <p>문의 : Eunsun.cho@lgepartner.com (LG전자 컨소시엄 조은선 사원)</p>
+          <p class="note-red">※ 본 기준은 4M 변경 승인에 필요한 최소한의 교육 항목만을 규정하였으며 추가적인 교육이 필요할 경우 자체적인 판단 하에 계획을 수립하여 수강할 것</p>
+        </div>
+
+        <!-- 4. 4M Gate Process -->
+        <div class="letter-sec">
+          <h3>4. 4M Gate Process</h3>
+          <p style="color:#94a3b8;font-style:italic">※ 본 섹션은 원본 PPT의 플로우차트 이미지로 구성되어 있습니다. 원본 파일을 참조하세요.</p>
+          <p>Appendix : 4M Gate Check list (Sample) and Approval process</p>
+          <p>- 사전 점검 결과는 협력사 결재 승인을 득해야 하며, 4M 사전 회의 시 4M 회의록에 Review 및 결과 첨부되어야 한다.</p>
+          <p>- 초품 품질 점검 결과는 협력사 결재 승인을 득해야 하며, GQMS 4M 시스템 의뢰 시 결과 첨부되어야 한다.</p>
+        </div>
+
+        <!-- 5. Help Desk -->
+        <div class="letter-sec">
+          <h3>5. 4M Help Desk 운영</h3>
+          <p><strong>운영방법 :</strong> 전화 및 대표 Email 접수</p>
+          <h4>운영 내용</h4>
+          <ul>
+            <li>① 변경점에 대한 신고 필요 여부</li>
+            <li>② 부품 별 LG 담당 부서 및 담당자 문의</li>
+            <li>③ 4M 신고 시 기술 검토 사항 (검증 항목, 시료수 등)</li>
+            <li>④ 4M 운영 절차 교육 요청 접수</li>
+            <li>⑤ 4M 부당 사례 (접수 / 처리 지연)</li>
+          </ul>
+          <h4>Help Desk Contact Point</h4>
+          <ul>
+            <li><strong>① 회로</strong></li>
+            <li>→ 조달 : VS조달팀 김봉구 책임 (bonggu.kim@lge.com, 010-2263-5327)</li>
+            <li>→ 품질 : VS부품품질보증팀 유성호 책임 (antony.yu@lge.com, 010-7537-1045)</li>
+            <li><strong>② 기구</strong></li>
+            <li>→ 조달 : VS조달팀 한정섭 책임 (jeongsup.han@lge.com, 010-3283-0641)</li>
+            <li>→ 품질 : VS부품품질보증팀 우숙하 책임 (sukha.woo@lge.com, 010-2400-4143)</li>
+          </ul>
+        </div>
+
+        <!-- 6. 유해물질 관리 -->
+        <div class="letter-sec">
+          <h3>유해물질 관리강화 요청 공문</h3>
+          <p><strong>수신 :</strong> VS사업본부 협력사 대표이사 / 품질 부서장</p>
+          <p><strong>발신 :</strong> LG전자 VS양산품질보증실장</p>
+          <p><strong>제목 :</strong> VS사업본부 협력사 유해물질 공정 / 검사 관리 강화 요청 件 ('23년 10월 04일)</p>
+          <p style="margin-top:8px">귀사의 업무 협조에 감사 드리며, 공급 부품의 유해물질 이슈가 발생되지 않도록 협조 부탁 드립니다.</p>
+          <h4>1. 유해물질 측정 시료</h4>
+          <p>가공된 완제품을 분해하여 균질재질 단위로 측정 (대상 : 전체 협력사)</p>
+          <h4>2. 유해물질 관리강화</h4>
+          <p><strong>① 유해물질 측정 부품 기준 변경</strong></p>
+          <div style="overflow-x:auto">
+          <table class="letter-tbl">
+            <thead><tr><th>구분</th><th>기존</th><th>변경</th></tr></thead>
+            <tbody><tr><td>측정부품</td><td>대표 품번</td><td>전체 품번 (전 부품)</td></tr></tbody>
+          </table>
+          </div>
+          <p><strong>② Br초과 시 정밀분석 성적서 유효기간 단축 및 측정대상 구체화</strong></p>
+          <div style="overflow-x:auto">
+          <table class="letter-tbl">
+            <thead><tr><th>구분</th><th></th><th>기존</th><th>변경</th></tr></thead>
+            <tbody>
+              <tr><td rowspan="2">Br초과 정밀분석 성적서</td><td>유효기간</td><td>발행일 기준 2년 이하</td><td>발행일 기준 3개월 이하</td></tr>
+              <tr><td>측정대상</td><td>Resin 및 원재료</td><td>가공된 완제품</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <p><strong>③ 프탈레이트 검사 강화</strong></p>
+          <div style="overflow-x:auto">
+          <table class="letter-tbl">
+            <thead><tr><th>구분</th><th></th><th>기존</th><th>변경</th></tr></thead>
+            <tbody>
+              <tr><td rowspan="2">프탈레이트분석성적서</td><td>측정주기</td><td>발행일 기준 2년 이하</td><td>분기</td></tr>
+              <tr><td>측정대상</td><td>-</td><td>가공된 완제품</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <h4>3. 협력사 공정관리 가이드 및 자체 점검 List 배포 (Critical 부품)</h4>
+          <ul>
+            <li>사출 협력사 공정 관리, N차협력사 친환경 점검 Check List, 사출협력사 Self Check List</li>
+            <li>자체 공정 및 N차 협력사까지 공정관리 및 점검 요망</li>
+          </ul>
+          <p><strong>4. 시행일자 :</strong> 즉시</p>
+          <p>세부 변경사항은 HSMS System에 공지되어 있는 14판 LG전자 유해물질 관리지침 참조</p>
+        </div>
+
+      </div><!-- /letterKo -->
+
+      <!-- ── English ── -->
+      <div id="letterEn" class="letter-wrap" style="display:none">
+
+        <div class="letter-cover">
+          <h2>📋 Notice on 4M Change for Part Supplier</h2>
+          <p><strong>Recipient :</strong> Supplier CEO of LG Electronics VS Company Smart Division</p>
+          <p style="margin-top:12px">We appreciate you and your valued managers for great efforts to continuously improve and maintain product quality.</p>
+          <p>This letter focuses on our request for you to put special attention/management to prevent arbitrary change of 4M because it can cause extraordinary quality problem including but not limited to malfunction of final product.</p>
+          <p style="margin-top:16px;text-align:right"><strong>2020. 12. 01.</strong></p>
+          <p style="text-align:right">Global Operation Center &nbsp;/&nbsp; Quality Management Center</p>
+        </div>
+
+        <div class="letter-sec">
+          <h3>1. 4M Change Declaration Subject Rate Criteria (General Part)</h3>
+          <div style="overflow-x:auto">
+          <table class="letter-tbl">
+            <thead><tr><th>Class</th><th>4M</th><th>No</th><th>Topic</th><th>Detail</th><th>Remark</th></tr></thead>
+            <tbody>
+              <tr><td class="lbl-gate" rowspan="3">4M Gate</td><td class="m4-all" rowspan="3">All</td><td>1</td><td>Production location change</td><td>Production location (Plant) change (Semi conductor, Sub supplier → Important 4M Rate)</td><td></td></tr>
+              <tr><td>2</td><td>New / multiple production line installation</td><td>New / multiple production line installation (Semi conductor, Sub supplier → Important 4M Rate)</td><td></td></tr>
+              <tr><td>3</td><td>Supplier process inhousing</td><td>Supplier process inhousing (Semi conductor, Sub supplier → Important 4M Rate)</td><td></td></tr>
+              <tr><td class="lbl-major" rowspan="27">Important 4M</td><td class="m4-machine" rowspan="8">Machine</td><td>4</td><td>New / multiple / replacement Tool (Mold) build</td><td>New / multiple / replacement Tool (Mold) build</td><td rowspan="8">Plastic injection, Stamping, Welding, Extrusion, Drawing, Vacuum forming, Foaming, coating, Auto insertion, SMT, Soldering, Drying, Heat treatment Machine etc.</td></tr>
+              <tr><td>5</td><td>Forming area modification at Mold</td><td>Apply to forming area modification, replacement of Punch &amp; die, core</td></tr>
+              <tr><td>6</td><td>Mold transition</td><td>Apply to transition between suppliers</td></tr>
+              <tr><td>7</td><td>New production equipment installation</td><td>Apply to install new production machine</td></tr>
+              <tr><td>8</td><td>Production equipment transition</td><td>In case of transition of production machine for repair or relocation</td></tr>
+              <tr><td>9</td><td>Production equipment change</td><td>In case of retrofit, overhaul for capacity increase, structure change</td></tr>
+              <tr><td>10</td><td>JIG for production process</td><td>Apply to develop new production JIG</td></tr>
+              <tr><td>11</td><td>Inspection machine / JIG</td><td>Apply to develop new inspection machine / JIG or remove old one</td></tr>
+              <tr><td class="m4-material" rowspan="15">Material</td><td>12</td><td>Assembly (Mechanical/Circuit) characteristic change</td><td>Characteristic (structure/function/appearance) change</td><td></td></tr>
+              <tr><td>13</td><td>Assembly (Mechanical/Circuit) mold</td><td>New development or modification of mold for components at assembly</td><td></td></tr>
+              <tr><td>14</td><td>Assembly (Mechanical/Circuit) material</td><td>Material change of components at assembly</td><td></td></tr>
+              <tr><td>15</td><td>Assembly (Mechanical/Circuit) rate</td><td>Grade change of components at assembly</td><td></td></tr>
+              <tr><td>16</td><td>Assembly (Mechanical/Circuit) hazardous substance</td><td>Hazardous substance change of components at assembly</td><td></td></tr>
+              <tr><td>17</td><td>Assembly (Mechanical/Circuit) manufacturing</td><td>Manufacturing change of components at assembly</td><td></td></tr>
+              <tr><td>18</td><td>Assembly (Mechanical/Circuit) purchasing</td><td>Provider change of components at assembly</td><td></td></tr>
+              <tr><td>19</td><td>Assembly (Mechanical/Circuit) compliant certification</td><td>Expiration or cancelation of certification</td><td></td></tr>
+              <tr><td>20</td><td>Sub material change 1</td><td>Sub material change that directly applied at product (anti-corrosion oil, machining oil, detergent, flux, release agent, protect vinyl…)</td><td></td></tr>
+              <tr><td>21</td><td>Sub material change 2</td><td>Welding gas, 4 classified forbidden material (Foam, grease, double sided tape, adhesive)</td><td></td></tr>
+              <tr><td>22</td><td>Raw material change</td><td>Apply to change maker, material, property, thickness, strength, dimension, temperature characteristic, elongation, chemical substance, hazardous substance</td><td></td></tr>
+              <tr><td>23</td><td>Raw material : Scrap ratio</td><td>Apply to change usage ratio for raw material : Scrap</td><td></td></tr>
+              <tr><td>24</td><td>Raw material color</td><td>Apply to change color treatment using raw material</td><td></td></tr>
+              <tr><td>25</td><td>Raw material surface treatment</td><td>Apply to change surface treatment / plating / spray / coating using raw material</td><td></td></tr>
+              <tr><td>26</td><td>Raw material purchasing</td><td>Apply to change provider of raw material (Grade is to be same)</td><td></td></tr>
+              <tr><td class="m4-method" rowspan="4">Method</td><td>27</td><td>Inspection remove</td><td>Apply to remove inspection item or condition at income / process / outgoing</td><td></td></tr>
+              <tr><td>28</td><td>Manufacturing method change</td><td>Apply to change manufacturing method for die-casting, forging, plating, heat treatment, stamping, plastic injection, bonding, welding, spraying, cutting, assembling, soldering, sealing…</td><td></td></tr>
+              <tr><td>29</td><td>Sub supplier change</td><td>Changing correct sub supplier or applying new one at mass production</td><td></td></tr>
+              <tr><td>30</td><td>Sub supplier outsourcing</td><td>Apply sub supplier to out-source in-house process</td><td></td></tr>
+              <tr><td class="lbl-simple" rowspan="22">Simple 4M</td><td class="m4-man" rowspan="3">Man</td><td>31</td><td>Person in charge of hazardous substance</td><td>Apply to person who is in charge of environment management / hazardous substance inspection</td><td></td></tr>
+              <tr><td>32</td><td>Quality responsible person</td><td>Apply to change the person who is responsible quality in supplier</td><td></td></tr>
+              <tr><td>33</td><td>Mass workforce change</td><td>Apply to change equal or more than 50% workforce in production line</td><td></td></tr>
+              <tr><td class="m4-machine" rowspan="10">Machine</td><td>34</td><td>Equipment device change</td><td>Apply to device or tool in equipment (manufacturing, assembling, electric plug…)</td><td rowspan="10">Plastic injection, Stamping, Welding, Extrusion, Drawing, Vacuum forming, Foaming, coating, Auto insertion, SMT, Soldering, Drying, Heat treatment Machine etc.</td></tr>
+              <tr><td>35</td><td>Production tool change</td><td>Apply to change the tool which uses for dedicated work</td></tr>
+              <tr><td>36</td><td>Production machine multiple installation</td><td>Apply for additional installation of machine that is already applied for production</td></tr>
+              <tr><td>37</td><td>Simple transition of production machine</td><td>Apply to transit the equipment and related process within current space simply</td></tr>
+              <tr><td>38</td><td>Applying un-used machine</td><td>Apply to use the machine which is not used for equal or more than 6 months by specific reason</td></tr>
+              <tr><td>39</td><td>Production JIG (Only for production process)</td><td>Making additional JIG</td></tr>
+              <tr><td>40</td><td>Production JIG (Only for production process)</td><td>Modification of JIG</td></tr>
+              <tr><td>41</td><td>Inspection equipment (inspection machine / JIG)</td><td>Modification, additional making, repair</td></tr>
+              <tr><td>42</td><td>Inspection equipment (inspection machine / JIG)</td><td>Auto inspection machine change (Leak tester, Completion inspector)</td></tr>
+              <tr><td>43</td><td>Inspection equipment (inspection machine / JIG)</td><td>Manual inspection equipment change (Air micrometer…)</td></tr>
+              <tr><td class="m4-material">Material</td><td>44</td><td>Sub material</td><td>Change the volume of sub material using product directly such as anti corrosion agent, machining oil, detergent, Flux, release agent, protect vinyl…</td><td></td></tr>
+              <tr><td class="m4-method" rowspan="8">Method</td><td>45</td><td>Add inspection</td><td>Add inspection method or condition at income / process / outgoing</td><td></td></tr>
+              <tr><td>46</td><td>Inspection change</td><td>Change inspection method or condition at income / process / outgoing</td><td></td></tr>
+              <tr><td>47</td><td>Inspection adjust</td><td>Apply to process integration, remove, sequence or layout change in current space</td><td></td></tr>
+              <tr><td>48</td><td>Production line transit (simple)</td><td>Apply to transit the production line which is not including inspection equipment in current space simply in order to improve line competency, without machine / JIG modification</td><td></td></tr>
+              <tr><td>49</td><td>Logistic change</td><td>Apply to change transportation, provision system / method for delivery</td><td></td></tr>
+              <tr><td>50</td><td>Packaging method</td><td>Apply to change package specification and method (Cart, Tray, Boxing shape or material change…)</td><td></td></tr>
+              <tr><td>51</td><td>Machine condition</td><td>In case of condition change at manufacturing machine (Standard setting value, work sequence, Cycle Time…)</td><td></td></tr>
+              <tr><td>52</td><td>Work method</td><td>Apply to change work method at unit process by specific reason</td><td></td></tr>
+              <tr><td class="lbl-self" rowspan="9">No declaration required<br>(Self management)</td><td class="m4-man" rowspan="4">Man</td><td>53</td><td>Operator change</td><td>Apply to change operator at normal process</td><td></td></tr>
+              <tr><td>54</td><td>Foreign operator / new employee / inspector change</td><td>Apply to change inspector, new employee, foreign operator for manufacturing</td><td></td></tr>
+              <tr><td>55</td><td>Main process operator change</td><td>Apply to change main / special process operator (welding / Soldering / manual spraying)</td><td></td></tr>
+              <tr><td>56</td><td>Changing person in charge of sub supplier quality management</td><td>Apply to change the person who is responsible to 2nd, 3rd supplier quality</td><td></td></tr>
+              <tr><td class="m4-machine" rowspan="5">Machine</td><td>57</td><td>Device (Tool) change</td><td>Apply to replace the device which is same as used one at the machine</td><td rowspan="5">Plastic injection, Stamping, Welding, Extrusion, Drawing, Vacuum forming, Foaming, coating, Auto insertion, SMT, Soldering, Drying, Heat treatment Machine etc.</td></tr>
+              <tr><td>58</td><td>Mold maintenance</td><td>Apply to repair / replace spare part</td></tr>
+              <tr><td>59</td><td>Production equipment maintenance</td><td>Apply to repair / replace spare part (existing equipment condition is to be maintained)</td></tr>
+              <tr><td>60</td><td>Production JIG maintenance</td><td>Apply to repair / replace spare part</td></tr>
+              <tr><td>61</td><td>Normal inspection tool</td><td>Apply to change / replace normal inspection tool</td></tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+
+        <div class="letter-sec">
+          <h3>2. 4M Change Declaration Subject Rate Criteria (Semiconductor)</h3>
+          <p>Semi conductor 4M gate is to transact as important 4M</p>
+          <p><strong>◈ Semiconductor supplier 4M change declaration subject rate criteria</strong></p>
+          <p>For automotive semiconductor components (AEC-Q100/1/2/3/4, Q200), refer to the PCN – Delta Qualification Matrix provided by ZVEI.</p>
+          <p>For Non-Automotive Semiconductor components, refer to LG(10)-A-9038 approval standard.</p>
+        </div>
+
+        <div class="letter-sec">
+          <h3>3. Training Requirement for Supplier Quality Responsible in Case of Change</h3>
+          <p><strong>Objective :</strong> In order to prevent quality risks following change of LGE VS supplier quality responsible person by achieving competency</p>
+          <p><strong>Applied range :</strong> Supplier quality representative, environment responsible person, hazardous substance inspector</p>
+          <p><strong>Procedure :</strong> Notify the change of quality responsible afterward submit output of education (certificate, education record) for approval</p>
+          <div style="overflow-x:auto;margin:10px 0">
+          <table class="letter-tbl">
+            <thead><tr><th>4M</th><th>Triggered case for 4M change</th><th>Self controlled</th><th>LG Approval (Simple)</th><th>LG Approval (Major)</th><th>4M Gate</th></tr></thead>
+            <tbody>
+              <tr><td class="m4-man" rowspan="6">Man</td><td>Operator changed at general process (Foreigner/New employee)</td><td style="text-align:center">●</td><td></td><td></td><td></td></tr>
+              <tr><td>Operator changed at main / special process</td><td style="text-align:center">●</td><td></td><td></td><td></td></tr>
+              <tr><td>Inspector changed</td><td style="text-align:center">●</td><td></td><td></td><td></td></tr>
+              <tr><td>Environment responsible and hazardous substance Inspector changed</td><td></td><td style="text-align:center">●</td><td></td><td></td></tr>
+              <tr><td>Supplier quality representative changed</td><td></td><td style="text-align:center">●</td><td></td><td></td></tr>
+              <tr><td>Tier 2,3 supplier quality representative changed</td><td style="text-align:center">●</td><td></td><td></td><td></td></tr>
+            </tbody>
+          </table>
+          </div>
+          <h4>Education</h4>
+          <div style="overflow-x:auto">
+          <table class="letter-tbl">
+            <thead><tr><th>No.</th><th>Training contents</th><th>Applied range</th><th>Collection guide</th><th>Remark</th></tr></thead>
+            <tbody>
+              <tr><td style="text-align:center">1</td><td>Advance quality management</td><td>All</td><td>Essential</td><td>Essential course for all</td></tr>
+              <tr><td style="text-align:center">2</td><td>APQP process</td><td>Supplier quality representative</td><td>Choose one from 2–3</td><td>Specialized for automotive biz</td></tr>
+              <tr><td style="text-align:center">3</td><td>Automotive Core tool</td><td></td><td></td><td></td></tr>
+              <tr><td style="text-align:center">4</td><td>Hazardous substance measure</td><td>Environment responsible / inspector</td><td>Essential</td><td>Hazardous substance</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <p style="margin-top:10px"><strong>Way to request training :</strong> Follow the direction to get training course after check contract between LG consortium and supplier</p>
+          <p>Training site : <strong>https://hrd.lge.com</strong></p>
+          <p>Contact : Eunsun.cho@lgepartner.com</p>
+          <p class="note-red">※ This contains minimized requirement for education to transact supplier 4M change approval and supplier is able to choose additional course if necessary.</p>
+        </div>
+
+        <div class="letter-sec">
+          <h3>4. 4M Gate Process</h3>
+          <p style="color:#94a3b8;font-style:italic">※ This section consists of flowchart images in the original PPT. Please refer to the original file.</p>
+          <p>Appendix : 4M Gate Check list (Sample) and Approval process</p>
+          <p>- The results of the preliminary check list must be approved by the supplier, and the review and results must be attached to the 4M preliminary meeting minute.</p>
+          <p>- The results of the 1st quality check shall be approved by the supplier and attached to the request docu in GQMS system.</p>
+        </div>
+
+        <div class="letter-sec">
+          <h3>5. 4M Help Desk Operation</h3>
+          <p><strong>Operation Guide :</strong> Contact by phone or e-mail address to representatives in LGE</p>
+          <h4>Supportive Contents</h4>
+          <ul>
+            <li>① Require to confirm necessity of declaration for specific 4M change</li>
+            <li>② Require to get contact information LGE responsible to deal with 4M change</li>
+            <li>③ Technical validation requirement for 4M change (Test item, sampling size…)</li>
+            <li>④ Requesting to get training course for 4M operation process</li>
+            <li>⑤ Un-fair cases relating with 4M change (Delaying receiving or transaction)</li>
+          </ul>
+          <h4>Help Desk Contact Point</h4>
+          <ul>
+            <li><strong>① Circuit</strong></li>
+            <li>→ Purchasing : VS Purchasing Team BG Kim (bonggu.kim@lge.com, 010-2263-5327)</li>
+            <li>→ Quality : VS Supplier Quality Assurance Team Antony Yu (antony.yu@lge.com, 010-7537-1045)</li>
+            <li><strong>② Mechanical</strong></li>
+            <li>→ Purchasing : VS Purchasing Team JS Han (jeongsup.han@lge.com, 010-3283-0641)</li>
+            <li>→ Quality : VS Supplier Quality Assurance Team SK Woo (sukha.woo@lge.com, 010-2400-4143)</li>
+          </ul>
+        </div>
+
+        <div class="letter-sec">
+          <h3>Request to Strengthen Hazardous Substance Management</h3>
+          <p><strong>To :</strong> CEO of VS supplier / Quality Officer</p>
+          <p><strong>From :</strong> LG Electronics VS Quality Management Division</p>
+          <p><strong>Title :</strong> Request to strengthen supplier hazardous substance process / inspection management (Oct. 04, '23)</p>
+          <h4>1. Hazardous substance measurement sample</h4>
+          <p>Processed finished product is disassembled and measure as a homogeneous material unit (Target: All supplier)</p>
+          <h4>2. Strengthening the management of hazardous substances</h4>
+          <p><strong>① Change in standards for hazardous substances measurement parts</strong></p>
+          <div style="overflow-x:auto">
+          <table class="letter-tbl">
+            <thead><tr><th>Division</th><th>As-Is</th><th>To-Be</th></tr></thead>
+            <tbody><tr><td>Measurement parts</td><td>Representative part number</td><td>All part number</td></tr></tbody>
+          </table>
+          </div>
+          <p><strong>② Shortening the validity period of the precision analysis report in case of exceeding Br</strong></p>
+          <div style="overflow-x:auto">
+          <table class="letter-tbl">
+            <thead><tr><th>Division</th><th></th><th>As-Is</th><th>To-Be</th></tr></thead>
+            <tbody>
+              <tr><td rowspan="2">Exceeded Br Precision Analysis Report</td><td>Validity period</td><td>2 years or less from the date of issue</td><td>3 months or less from the date of issue</td></tr>
+              <tr><td>What to measure</td><td>Resin &amp; Raw Materials</td><td>Finished Product</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <p><strong>③ Strengthening phthalate precision analysis management/inspection</strong></p>
+          <div style="overflow-x:auto">
+          <table class="letter-tbl">
+            <thead><tr><th>Division</th><th></th><th>As-Is</th><th>To-Be</th></tr></thead>
+            <tbody>
+              <tr><td rowspan="2">Phthalate Precision Analysis Report</td><td>Measurement Cycle</td><td>2 years or less from the date of issue</td><td>Quarterly</td></tr>
+              <tr><td>What to measure</td><td>-</td><td>Finished Product</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <h4>3. Distribution of supplier process management guide and self-inspection list</h4>
+          <ul>
+            <li>Injection supplier process management, Nth supplier RoHS inspection check list, injection supplier self-check list</li>
+            <li>Request for process management and inspection to in-house process and Nth partner</li>
+          </ul>
+          <p><strong>4. Effective Date :</strong> Immediately</p>
+        </div>
+
+      </div><!-- /letterEn -->
+    </div><!-- /tab-letter -->
+
+    <!-- ═══ TAB: 종합현황 ═══ -->
+    <div class="tab-panel active" id="tab-overview">
+      <div class="stat-row" id="statRow"></div>
+
+      <div class="chart-row">
+        <div class="chart-card">
+          <div class="chart-title">📊 4M 유형별 변동건수</div>
+          <div class="bar-wrap" id="chart4M"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">📅 월별 변동건수 (최근 6개월)</div>
+          <div class="bar-wrap" id="chartMonth"></div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-title">최근 변동점 이력</div>
+        <button class="btn btn-primary" onclick="openRegModal()">+ 변동점 등록</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th><th>등록일</th><th>부서</th><th>4M 유형</th><th>품종</th><th>부품명</th><th>고객사</th>
+              <th>변경전 내용</th><th>변경후 내용</th><th>변경전 사진</th><th>변경후 사진</th><th>상태</th><th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="overviewTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ TAB: 변동점 이력 ═══ -->
+    <div class="tab-panel" id="tab-history">
+      <div class="toolbar">
+        <div class="toolbar-title">변동점 등록 이력</div>
+        <button class="btn btn-primary" onclick="openRegModal()">+ 변동점 등록</button>
+        <button class="btn btn-outline" onclick="exportCSV()">📥 CSV 내보내기</button>
+      </div>
+      <div class="filter-row">
+        <select id="filterDept" onchange="renderHistory()">
+          <option value="">전체 부서</option>
+          <option value="영업팀">영업팀</option>
+          <option value="경영지원팀">경영지원팀</option>
+          <option value="구매팀">구매팀</option>
+          <option value="개발팀">개발팀</option>
+          <option value="품질팀">품질팀</option>
+          <option value="생산관리팀">생산관리팀</option>
+          <option value="사출팀">사출팀</option>
+          <option value="도장팀">도장팀</option>
+          <option value="조립팀">조립팀</option>
+        </select>
+        <select id="filter4m" onchange="renderHistory()">
+          <option value="">전체 4M 유형</option>
+          <option value="Man">Man (인원)</option>
+          <option value="Machine">Machine (설비)</option>
+          <option value="Material">Material (자재)</option>
+          <option value="Method">Method (방법)</option>
+        </select>
+        <select id="filterModel" onchange="renderHistory()"><option value="">전체 품종</option></select>
+        <select id="filterStatus" onchange="renderHistory()">
+          <option value="">전체 상태</option>
+          <option value="대기">대기</option>
+          <option value="진행중">진행중</option>
+          <option value="완료">완료</option>
+          <option value="지연">지연</option>
+        </select>
+        <input type="date" id="filterFrom" onchange="renderHistory()" placeholder="시작일">
+        <input type="date" id="filterTo" onchange="renderHistory()" placeholder="종료일">
+        <button class="btn btn-outline" onclick="clearFilters()">초기화</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th><th>등록일</th><th>부서</th><th>4M 유형</th><th>신고/처리기준</th><th>품종코드</th><th>품종명</th><th>부품코드</th><th>부품명</th><th>고객사</th>
+              <th>변경전 내용</th><th>변경후 내용</th><th>변경전 사진</th><th>변경후 사진</th><th>상태</th><th>비고</th><th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="historyTbody"></tbody>
+          <tfoot><tr id="historyFoot"></tr></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ TAB: 모델별 변동점 관리 ═══ -->
+    <div class="tab-panel" id="tab-model" style="padding:0;display:none;flex-direction:column">
+      <!-- 상단 툴바 -->
+      <div class="toolbar" style="padding:12px 20px;flex-shrink:0">
+        <div class="toolbar-title">모델별 변동점 관리</div>
+        <input type="text" id="mvSearch" placeholder="🔍 모델명 검색..." oninput="renderModelView()"
+          style="padding:7px 12px;border:1px solid #dde3ee;border-radius:7px;font-size:13px;width:200px;outline:none">
+        <button class="btn btn-primary" onclick="openRegModal()">+ 변동점 등록</button>
+      </div>
+      <!-- 2단 레이아웃 -->
+      <div style="display:flex;flex:1;overflow:hidden;min-height:0">
+        <!-- 좌측 모델 목록 -->
+        <div style="width:190px;flex-shrink:0;border-right:1.5px solid #dde3ee;overflow-y:auto;background:#f8fafc">
+          <div style="padding:10px 14px 6px;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase">모델 목록</div>
+          <div id="mvModelList"></div>
+        </div>
+        <!-- 우측 품목 목록 -->
+        <div style="flex:1;overflow-y:auto;padding:20px 24px" id="mvContent">
+          <div style="color:#94a3b8;font-size:14px;padding:40px 0;text-align:center">
+            ← 왼쪽에서 모델을 선택하세요
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB: 고객사별 변동점 관리 ═══ -->
+    <div class="tab-panel" id="tab-customer" style="padding:0;display:none;flex-direction:column">
+      <div class="toolbar" style="padding:12px 20px;flex-shrink:0">
+        <div class="toolbar-title">고객사별 변동점 관리</div>
+        <input type="text" id="cvSearch" placeholder="🔍 고객사명 검색..." oninput="renderCustomerView()"
+          style="padding:7px 12px;border:1px solid #dde3ee;border-radius:7px;font-size:13px;width:200px;outline:none">
+        <button class="btn btn-primary" onclick="openRegModal()">+ 변동점 등록</button>
+      </div>
+      <div style="display:flex;flex:1;overflow:hidden;min-height:0">
+        <div style="width:190px;flex-shrink:0;border-right:1.5px solid #dde3ee;overflow-y:auto;background:#f8fafc">
+          <div style="padding:10px 14px 6px;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase">고객사 목록</div>
+          <div id="cvCustomerList"></div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:20px 24px" id="cvContent">
+          <div style="color:#94a3b8;font-size:14px;padding:40px 0;text-align:center">
+            ← 왼쪽에서 고객사를 선택하세요
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB: 신고/처리기준별 변동점 관리 ═══ -->
+    <div class="tab-panel" id="tab-reportstd" style="padding:0;display:none;flex-direction:column">
+      <div class="toolbar" style="padding:12px 20px;flex-shrink:0">
+        <div class="toolbar-title">신고/처리기준별 변동점 관리</div>
+        <input type="text" id="rvSearch" placeholder="🔍 기준명 검색..." oninput="renderReportStdView()"
+          style="padding:7px 12px;border:1px solid #dde3ee;border-radius:7px;font-size:13px;width:200px;outline:none">
+        <button class="btn btn-primary" onclick="openRegModal()">+ 변동점 등록</button>
+      </div>
+      <div style="display:flex;flex:1;overflow:hidden;min-height:0">
+        <div style="width:190px;flex-shrink:0;border-right:1.5px solid #dde3ee;overflow-y:auto;background:#f8fafc">
+          <div style="padding:10px 14px 6px;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase">기준 목록</div>
+          <div id="rvLevelList"></div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:20px 24px" id="rvContent">
+          <div style="color:#94a3b8;font-size:14px;padding:40px 0;text-align:center">
+            ← 왼쪽에서 신고/처리기준을 선택하세요
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB: 파일 업로드 ═══ -->
+    <div class="tab-panel" id="tab-upload">
+      <div class="toolbar"><div class="toolbar-title">파일 업로드</div></div>
+
+      <!-- 업로드 카드 -->
+      <div class="upload-card-wrap">
+        <div class="upload-card" id="bomUploadCard">
+          <input type="file" id="bomFileInput" accept=".xlsx,.xls" onchange="handleBomFile(this.files[0])">
+          <div class="upload-card-icon" id="bomCardIcon">🗂️</div>
+          <div class="upload-card-label">BOM 파일</div>
+          <div class="upload-card-desc">품종 · 부품 정보 (XLSX)</div>
+          <div class="upload-card-status" id="bomCardStatus">클릭하거나 파일을 드래그하여 업로드</div>
+          <div class="upload-card-time" id="bomCardTime"></div>
+        </div>
+      </div>
+
+      <!-- 로드된 BOM 정보 -->
+      <div id="bomDetailInfo" style="display:none">
+        <div class="section-title">📦 로드된 BOM 정보</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+          <div class="detail-field"><label>파일명</label><div class="val" id="bomDetailFile">-</div></div>
+          <div class="detail-field"><label>총 품종 수</label><div class="val" id="bomDetailModels">-</div></div>
+          <div class="detail-field"><label>총 부품 건수</label><div class="val" id="bomDetailParts">-</div></div>
+          <div class="detail-field" style="grid-column:1/-1"><label>로드 일시</label><div class="val" id="bomDetailTime">-</div></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline" onclick="document.getElementById('bomFileInput').click()">🔄 파일 재업로드</button>
+          <button class="btn" style="background:#c62828;color:#fff" onclick="if(confirm('저장된 BOM 데이터를 초기화합니까?')) clearBomFromIDB()">🗑️ BOM 초기화</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- ═══ DB 로딩 오버레이 ═══ -->
+<div id="dbLoadingOverlay" style="display:none;position:fixed;inset:0;background:rgba(13,43,94,0.55);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+  <div style="width:48px;height:48px;border:5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite"></div>
+  <div style="color:#fff;font-size:15px;font-weight:700">데이터 불러오는 중...</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<!-- ═══ 변동점 등록 MODAL ═══ -->
+<div class="modal-overlay" id="regModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="regModalTitle">📝 변동점 등록</h3>
+      <button class="modal-close" onclick="closeRegModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <!-- 등록일 -->
+        <div class="form-group">
+          <label class="form-label">등록일<span class="req">*</span></label>
+          <input type="date" class="form-control" id="regDate">
+        </div>
+        <!-- 4M 유형 -->
+        <div class="form-group">
+          <label class="form-label">4M 유형<span class="req">*</span></label>
+          <select class="form-control" id="reg4m" onchange="onReg4mChange()">
+            <option value="">선택</option>
+            <option value="All">All (전체)</option>
+            <option value="Man">Man (인원)</option>
+            <option value="Machine">Machine (설비)</option>
+            <option value="Material">Material (자재)</option>
+            <option value="Method">Method (방법)</option>
+          </select>
+        </div>
+        <!-- 변경 항목 선택 -->
+        <div class="form-group form-full" id="changeItemGroup" style="display:none">
+          <label class="form-label">변경 항목 선택<span class="req">*</span></label>
+          <select class="form-control" id="regChangeItem" onchange="onChangeItemSelect()" style="font-size:13px">
+            <option value="">-- 4M 유형 선택 후 항목을 선택하세요 --</option>
+          </select>
+        </div>
+        <!-- 신고/처리기준 (자동입력) -->
+        <div class="form-group" id="changeInfoBox">
+          <label class="form-label">신고/처리기준</label>
+          <input type="text" class="form-control" id="regReportStd" readonly
+            placeholder="변경 항목 선택 시 자동 입력"
+            style="background:#f0f7ff;color:#0d2b5e;font-weight:700;cursor:default">
+          <input type="hidden" id="regChangeItemNo">
+        </div>
+        <!-- 변경내용 (자동입력 + 수정 가능) -->
+        <div class="form-group form-full" id="changeDescGroup">
+          <label class="form-label">변경내용
+            <span style="font-size:11px;font-weight:400;color:#64748b;margin-left:6px">변경 항목 선택 시 자동 입력 (수정 가능)</span>
+          </label>
+          <textarea class="form-control" id="regChangeDesc" rows="3"
+            placeholder="변경 항목 선택 시 자동 입력됩니다"></textarea>
+        </div>
+        <!-- 품종 선택 -->
+        <div class="form-group">
+          <label class="form-label">품종 선택<span class="req">*</span></label>
+          <div style="position:relative">
+            <input type="text" class="form-control" id="regModelInput"
+              placeholder="-- 품종명 입력하여 검색 --"
+              oninput="filterModelDropdown()"
+              onfocus="openModelDropdown()"
+              onblur="setTimeout(closeModelDropdown,200)"
+              autocomplete="off">
+            <div id="regModelDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:500;background:#fff;border:1px solid #cdd5e0;border-radius:6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.15);margin-top:2px"></div>
+            <input type="hidden" id="regModel">
+          </div>
+        </div>
+        <!-- 품목유형 -->
+        <div class="form-group">
+          <label class="form-label">품목유형</label>
+          <select class="form-control" id="regPartType" onchange="onPartTypeChange()">
+            <option value="">선택</option>
+            <option value="조립">조립</option>
+            <option value="사출">사출</option>
+            <option value="도장">도장</option>
+            <option value="인쇄">인쇄</option>
+            <option value="구매">구매</option>
+            <option value="금형">금형</option>
+            <option value="설비">설비</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <!-- 품목명 선택 -->
+        <div class="form-group">
+          <label class="form-label">품목명 선택</label>
+          <div style="position:relative">
+            <input type="text" class="form-control" id="regPartInput"
+              placeholder="-- 품목명 입력하여 검색 --"
+              oninput="filterPartDropdown()"
+              onfocus="openPartDropdown()"
+              onblur="setTimeout(closePartDropdown, 200)"
+              autocomplete="off">
+            <div id="regPartDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:500;background:#fff;border:1px solid #cdd5e0;border-radius:6px;max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.15);margin-top:2px"></div>
+            <input type="hidden" id="regPart">
+          </div>
+        </div>
+        <!-- 품목코드 자동입력 -->
+        <div class="form-group">
+          <label class="form-label">품목코드 (자동)</label>
+          <input type="text" class="form-control" id="regPartCode" readonly placeholder="품목 선택 시 자동 입력" style="background:#f8fafc;color:#64748b;">
+        </div>
+        <!-- 고객사 P/N 자동입력 -->
+        <div class="form-group">
+          <label class="form-label">고객사 P/N (자동)</label>
+          <input type="text" class="form-control" id="regCustPartNo" readonly placeholder="품목 선택 시 자동 입력" style="background:#f8fafc;color:#64748b;">
+        </div>
+        <!-- 고객사 자동입력 -->
+        <div class="form-group">
+          <label class="form-label">고객사 (자동)</label>
+          <input type="text" class="form-control" id="regCustomer" readonly placeholder="품목 선택 시 자동 입력" style="background:#f8fafc;color:#64748b;">
+        </div>
+        <!-- 변경전 내용 -->
+        <div class="form-group form-full">
+          <label class="form-label">변경전 내용<span class="req">*</span></label>
+          <textarea class="form-control" id="regBefore" placeholder="변경 전 내용을 입력하세요"></textarea>
+        </div>
+        <!-- 변경후 내용 -->
+        <div class="form-group form-full">
+          <label class="form-label">변경후 내용<span class="req">*</span></label>
+          <textarea class="form-control" id="regAfter" placeholder="변경 후 내용을 입력하세요"></textarea>
+        </div>
+        <!-- 첨부파일 -->
+        <div class="form-group form-full">
+          <label class="form-label">📎 첨부파일 (변경후)</label>
+          <div class="attach-list" id="attachFileList"></div>
+          <label class="attach-upload-label" onclick="event.stopPropagation()">
+            <input type="file" id="attachFileInput" multiple style="display:none" onchange="handleAttachFiles(this)">
+            📎 파일 선택 (여러 파일 가능)
+          </label>
+        </div>
+        <!-- 부서명 -->
+        <div class="form-group">
+          <label class="form-label">부서명<span class="req">*</span></label>
+          <select class="form-control" id="regDept">
+            <option value="">선택</option>
+            <option value="영업팀">영업팀</option>
+            <option value="경영지원팀">경영지원팀</option>
+            <option value="구매팀">구매팀</option>
+            <option value="개발팀">개발팀</option>
+            <option value="품질팀">품질팀</option>
+            <option value="생산관리팀">생산관리팀</option>
+            <option value="사출팀">사출팀</option>
+            <option value="도장팀">도장팀</option>
+            <option value="조립팀">조립팀</option>
+          </select>
+        </div>
+        <!-- 담당자 / 조치시점 -->
+        <div class="form-group">
+          <label class="form-label">담당자</label>
+          <input type="text" class="form-control" id="regAssignee" placeholder="담당자 이름">
+        </div>
+        <div class="form-group">
+          <label class="form-label">조치시점</label>
+          <input type="date" class="form-control" id="regActionDate">
+        </div>
+        <!-- 조치결과 / 품질검증 -->
+        <div class="form-group">
+          <label class="form-label">조치결과</label>
+          <select class="form-control" id="regStatus">
+            <option value="대기">대기</option>
+            <option value="진행중">진행중</option>
+            <option value="완료">완료</option>
+            <option value="지연">지연</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">품질검증</label>
+          <select class="form-control" id="regQualityCheck">
+            <option value="">선택</option>
+            <option value="OK">OK</option>
+            <option value="NG">NG</option>
+            <option value="진행중">진행중</option>
+            <option value="해당없음">해당없음</option>
+          </select>
+        </div>
+        <!-- 비고 -->
+        <div class="form-group form-full">
+          <label class="form-label">비고</label>
+          <input type="text" class="form-control" id="regNote" placeholder="비고 사항">
+        </div>
+      </div>
+
+      <!-- 사진 업로드 -->
+      <div class="section-title">📷 사진 등록</div>
+      <div style="font-size:11px;color:#64748b;margin-bottom:8px;background:#f0f5ff;padding:7px 12px;border-radius:6px">
+        💡 영역을 <strong>클릭</strong>하면 파란 테두리로 활성화 → <strong>Ctrl+V</strong> 로 붙여넣기, 또는 <strong>+ 사진 추가</strong>로 여러 장 첨부
+      </div>
+      <div class="photo-grid">
+        <!-- 변경전 사진 -->
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:12px;font-weight:800;color:#334155">변경전 사진</span>
+            <span class="paste-target-label" id="pasteHintBefore" style="font-size:11px;font-weight:800;color:#1565c0"></span>
+          </div>
+          <div class="multi-photo-section" id="photoSectionBefore" onclick="setPasteTarget('before',event)">
+            <div class="multi-photo-grid" id="photoGridBefore"></div>
+            <label class="add-photo-lbl" onclick="event.stopPropagation()">
+              <input type="file" accept="image/*" multiple style="display:none" onchange="addPhotos('before',this)">
+              📷 사진 추가
+            </label>
+          </div>
+        </div>
+        <!-- 변경후 사진 -->
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:12px;font-weight:800;color:#334155">변경후 사진</span>
+            <span class="paste-target-label" id="pasteHintAfter" style="font-size:11px;font-weight:800;color:#1565c0"></span>
+          </div>
+          <div class="multi-photo-section" id="photoSectionAfter" onclick="setPasteTarget('after',event)">
+            <div class="multi-photo-grid" id="photoGridAfter"></div>
+            <label class="add-photo-lbl" onclick="event.stopPropagation()">
+              <input type="file" accept="image/*" multiple style="display:none" onchange="addPhotos('after',this)">
+              📷 사진 추가
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeRegModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveRecord()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 상세보기 MODAL ═══ -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" style="width:820px">
+    <div class="modal-header">
+      <h3>🔍 변동점 상세보기</h3>
+      <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="modal-body" id="detailModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeDetailModal()">닫기</button>
+      <button class="btn btn-primary" id="detailEditBtn" onclick="closeDetailModal();openRegModal(currentDetailId)">✏️ 수정</button>
+    </div>
+  </div>
+</div>
+
+<!-- 사진 뷰어 -->
+<div class="photo-viewer" id="photoViewer" onclick="closePhotoViewer()" style="position:relative">
+  <button class="pv-nav" style="left:20px" onclick="event.stopPropagation();pvNav(-1)" id="pvPrev">&#10094;</button>
+  <img id="photoViewerImg" src="" alt="">
+  <button class="pv-nav" style="right:20px" onclick="event.stopPropagation();pvNav(1)" id="pvNext">&#10095;</button>
+  <div class="pv-counter" id="pvCounter"></div>
+</div>
+
+<!-- 삭제 확인 -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-hd">⚠️ 삭제 확인</div>
+    <div class="confirm-bd" id="confirmMsg">이 변동점 이력을 삭제하시겠습니까?<br>삭제된 데이터는 복구할 수 없습니다.</div>
+    <div class="confirm-ft">
+      <button class="btn btn-outline" onclick="closeConfirm()">아니오</button>
+      <button class="btn" style="background:#c62828;color:#fff" onclick="confirmDelete()">예, 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+//  INDEXED DB — BOM 영구 저장
+// ═══════════════════════════════════════
+const IDB_NAME    = '4m_dashboard';
+const IDB_VER     = 5;   // 버전 올려서 스키마 재생성
+const IDB_STORE   = 'bom';
+const BOM_KEY     = 'current';
+
+function openIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+      if (!db.objectStoreNames.contains('attachments')) {
+        db.createObjectStore('attachments');
+      }
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+function saveBomToIDB(payload) {
+  openIDB().then(db => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(payload, BOM_KEY);
+    tx.oncomplete = () => db.close();
+  }).catch(err => console.error('IDB save error:', err));
+}
+
+function loadBomFromIDB() {
+  openIDB().then(db => {
+    const tx  = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(BOM_KEY);
+    req.onsuccess = e => {
+      db.close();
+      const saved = e.target.result;
+      if (!saved || saved.version < 6) return;
+      bomData = { masterList: saved.masterList };
+      updateBomUI(saved.fileName, saved.loadTime);
+    };
+    req.onerror = () => db.close();
+  }).catch(err => console.error('IDB load error:', err));
+}
+
+function clearBomFromIDB() {
+  openIDB().then(db => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(BOM_KEY);
+    tx.oncomplete = () => {
+      db.close();
+      bomData = null;
+      document.getElementById('bomDot').classList.remove('loaded');
+      document.getElementById('bomStatusTxt').textContent = 'BOM 미로드';
+      // 업로드 카드 초기화
+      const card = document.getElementById('bomUploadCard');
+      if (card) {
+        card.classList.remove('loaded');
+        document.getElementById('bomCardIcon').textContent = '🗂️';
+        document.getElementById('bomCardStatus').textContent = '클릭하거나 파일을 드래그하여 업로드';
+        document.getElementById('bomCardTime').textContent = '';
+      }
+      const info = document.getElementById('bomDetailInfo');
+      if (info) info.style.display = 'none';
+      ['regModel','filterModel'].forEach(id => {
+        const s = document.getElementById(id);
+        s.innerHTML = '<option value="">' + (id==='regModel' ? '-- BOM에서 품종 선택 --' : '전체 품종') + '</option>';
+      });
+      showToast('🗑️ BOM 데이터가 초기화되었습니다');
+    };
+  }).catch(err => console.error('IDB clear error:', err));
+}
+
+// ═══════════════════════════════════════
+//  ATTACHMENT IDB
+// ═══════════════════════════════════════
+function saveAttachmentsToIDB(recordId, files) {
+  openIDB().then(db => {
+    const tx = db.transaction('attachments', 'readwrite');
+    tx.objectStore('attachments').put(files, recordId);
+    tx.oncomplete = () => db.close();
+  }).catch(err => console.error('attach save error:', err));
+}
+
+function loadAttachmentsFromIDB(recordId, callback) {
+  openIDB().then(db => {
+    const tx  = db.transaction('attachments', 'readonly');
+    const req = tx.objectStore('attachments').get(recordId);
+    req.onsuccess = e => { db.close(); callback(e.target.result || []); };
+    req.onerror   = () => { db.close(); callback([]); };
+  }).catch(() => callback([]));
+}
+
+function deleteAttachmentsFromIDB(recordId) {
+  openIDB().then(db => {
+    const tx = db.transaction('attachments', 'readwrite');
+    tx.objectStore('attachments').delete(recordId);
+    tx.oncomplete = () => db.close();
+  }).catch(err => console.error('attach delete error:', err));
+}
+
+// ═══════════════════════════════════════
+//  4M 변경 항목 마스터 데이터
+// ═══════════════════════════════════════
+const CHANGE_ITEMS = [
+  {no:1,  level:'4M Gate',           type4m:'All',      name:'생산지 변경',                          desc:'기존 생산지(공장) 변경 (반도체, 2차협력사는 중요 4M 처리)'},
+  {no:2,  level:'4M Gate',           type4m:'All',      name:'라인 신설/복수 설치',                   desc:'생산 라인 신설/복수 설치 (반도체, 2차협력사는 중요 4M 처리)'},
+  {no:3,  level:'4M Gate',           type4m:'All',      name:'협력사 공정 내재화',                    desc:'협력사 일부 공정 사내화 (반도체, 2차협력사는 중요 4M 처리)'},
+  {no:4,  level:'중요 4M',           type4m:'Machine',  name:'금형 신작/증작/대체 금형 제작',          desc:'금형 신작, 2호/대체 금형 제작 (LGE가 직접 설계하는 기구 도면 부품 금형의 증작에 한해 기존 부품 인정시험과 동일히 DQMS 증작 금형 인정 시험 항목으로 변경점 처리)'},
+  {no:5,  level:'중요 4M',           type4m:'Machine',  name:'금형 성형부 개조',                     desc:'성형부 개조, Punch & die, Core 교환 시 적용'},
+  {no:6,  level:'중요 4M',           type4m:'Machine',  name:'금형 이관',                           desc:'업체 간 금형 이관 후 적용'},
+  {no:7,  level:'중요 4M',           type4m:'Machine',  name:'신규 생산설비 설치',                    desc:'신규 생산 설비의 설치 시 적용'},
+  {no:8,  level:'중요 4M',           type4m:'Machine',  name:'생산설비 이동',                        desc:'협력사 생산 설비가 이전/수리 등의 목적으로 공장 외로 이동하였을 경우'},
+  {no:9,  level:'중요 4M',           type4m:'Machine',  name:'생산설비 변경',                        desc:'용량 증대, 구조 변경에 의한 설비 개조 (Retrofit, Overhaul 등) 의 경우'},
+  {no:10, level:'중요 4M',           type4m:'Machine',  name:'생산 지그 (제조공정 전용)',              desc:'생산용 지그의 신규 제작 시 적용'},
+  {no:11, level:'중요 4M',           type4m:'Machine',  name:'측정기 (검사 설비/지그) - 신규/삭제',    desc:'검사 설비/지그 신규 제작/삭제 시 적용'},
+  {no:12, level:'중요 4M',           type4m:'Material', name:'Assembly (기구/회로) 특성 변경',        desc:'특성(구조/성능/외관) 변경'},
+  {no:13, level:'중요 4M',           type4m:'Material', name:'Assembly (기구/회로) 금형',            desc:'구성 부품의 금형 신작/개조'},
+  {no:14, level:'중요 4M',           type4m:'Material', name:'Assembly (기구/회로) 재질',            desc:'구성 부품의 Material 변경'},
+  {no:15, level:'중요 4M',           type4m:'Material', name:'Assembly (기구/회로) 등급',            desc:'구성 부품의 Grade 변경'},
+  {no:16, level:'중요 4M',           type4m:'Material', name:'Assembly (기구/회로) 유해물질',         desc:'구성 부품의 유해물질 변경'},
+  {no:17, level:'중요 4M',           type4m:'Material', name:'Assembly (기구/회로) 가공',            desc:'구성 부품의 가공 방법 변경'},
+  {no:18, level:'중요 4M',           type4m:'Material', name:'Assembly (기구/회로) 구매처',          desc:'구성 부품의 구입선 변경'},
+  {no:19, level:'중요 4M',           type4m:'Material', name:'Assembly (기구/회로) 규격',            desc:'규격 만료/취소 통보'},
+  {no:20, level:'중요 4M',           type4m:'Material', name:'부자재 변경1',                         desc:'제품에 직접 사용하는 부자재 변경 (방청제, 가공유, 세척제, 용제(Flux), 이형제, 보호비닐 등)'},
+  {no:21, level:'중요 4M',           type4m:'Material', name:'부자재 변경2',                         desc:'용접용 Gas, 4대 금지 물질 (Foam, 그리스, 양면Tape, 접착제)'},
+  {no:22, level:'중요 4M',           type4m:'Material', name:'원자재 변경',                          desc:'메이커, 재질, 물성, 두께, 강도, 치수, 온도특성, 연신율, 화학성분, 유해물질 등의 변경 시 적용'},
+  {no:23, level:'중요 4M',           type4m:'Material', name:'원자재 : Scrap 비율',                  desc:'원자재 : Scrap 사용 비율 변경 시 적용'},
+  {no:24, level:'중요 4M',           type4m:'Material', name:'원자재 색상',                          desc:'원자재를 사용한 색상 처리 방법이 변경될 경우 적용'},
+  {no:25, level:'중요 4M',           type4m:'Material', name:'원자재 표면처리',                       desc:'원자재를 사용한 표면처리/도금/도장 방식의 변경 시 적용'},
+  {no:26, level:'중요 4M',           type4m:'Material', name:'원자재 구매처',                        desc:'원자재의 구입처 변경 시 (Grade 동일)'},
+  {no:27, level:'중요 4M',           type4m:'Method',   name:'검사 삭제',                           desc:'수입/공정/출하 검사 항목 및 조건 삭제 시 적용'},
+  {no:28, level:'중요 4M',           type4m:'Method',   name:'공법 변경',                           desc:'주/단조, 도금, 열처리, 프레스, 사출, 접착, 용접, 도장, 절삭, 압입, 조립, 납땜, 쏠링 등의 제조 공법 변경 시 적용'},
+  {no:29, level:'중요 4M',           type4m:'Method',   name:'하위 협력사 변경',                     desc:'양산 중인 하위 협력사에 대해 신규 혹은 변경하여 적용 시'},
+  {no:30, level:'중요 4M',           type4m:'Method',   name:'하위 협력사 외주화',                   desc:'내재화한 공정을 하위 협력사로 외주화 (Outsourcing) 시 적용'},
+  {no:31, level:'단순 4M',           type4m:'Man',      name:'유해물질 관리인원',                     desc:'친환경 담당자/유해물질 검사원 변경 시 적용'},
+  {no:32, level:'단순 4M',           type4m:'Man',      name:'품질 책임자',                          desc:'당 협력사 품질 책임자 변경 시 적용'},
+  {no:33, level:'단순 4M',           type4m:'Man',      name:'대형 인원 변동',                       desc:'생산라인 작업자 50% 이상의 인원 과반수 변동 시 적용'},
+  {no:34, level:'단순 4M',           type4m:'Machine',  name:'설비 공구 변경',                       desc:'설비 내 공구의 변경 시 적용 (가공, 조립, 전극 등)'},
+  {no:35, level:'단순 4M',           type4m:'Machine',  name:'작업 공구 변경',                       desc:'전용 작업 시 사용하는 공구가 변경될 경우 적용'},
+  {no:36, level:'단순 4M',           type4m:'Machine',  name:'생산설비 복수설치',                     desc:'기 생산 중인 설비의 동일 기종 복수 설치 시 적용'},
+  {no:37, level:'단순 4M',           type4m:'Machine',  name:'생산설비 단순이동',                     desc:'기존 사용 중인 설비 및 관련 공정의 동일 공간 내 단순 이동 시 적용'},
+  {no:38, level:'단순 4M',           type4m:'Machine',  name:'유휴 장비 적용',                       desc:'특정 사유로 인해 6개월 이상 미사용된 유휴 장비 재사용 시 적용'},
+  {no:39, level:'단순 4M',           type4m:'Machine',  name:'생산용 지그 (제조공정 전용) - 복수 제작', desc:'복수 제작'},
+  {no:40, level:'단순 4M',           type4m:'Machine',  name:'생산용 지그 (제조공정 전용) - 개조',     desc:'생산용 지그 개조'},
+  {no:41, level:'단순 4M',           type4m:'Machine',  name:'측정기 (검사 설비/지그) - 개조/복수/수리', desc:'측정기 개조/복수 제작/수리'},
+  {no:42, level:'단순 4M',           type4m:'Machine',  name:'측정기 (검사 설비/지그) - 자동 계측기',   desc:'자동 계측기 변경 (리크테스터, 완성검사기 등)'},
+  {no:43, level:'단순 4M',           type4m:'Machine',  name:'측정기 (검사 설비/지그) - 수동 계측기',   desc:'수동 계측기 변경 (Air Micrometer 등)'},
+  {no:44, level:'단순 4M',           type4m:'Material', name:'부자재',                              desc:'제품에 직접 사용하는 방청제, 가공유, 세척제, 용제(Flux), 이형제, 보호비닐 등 부자재 용량 변경'},
+  {no:45, level:'단순 4M',           type4m:'Method',   name:'검사 추가',                           desc:'수입/공정/출하 검사방법 및 조건 추가'},
+  {no:46, level:'단순 4M',           type4m:'Method',   name:'검사 변경',                           desc:'수입/공정/출하 검사방법 및 조건 변경'},
+  {no:47, level:'단순 4M',           type4m:'Method',   name:'공정 조정',                           desc:'동일 공간 내 공정의 통합, 폐기, 순서변경, 레이아웃 변경 시 적용'},
+  {no:48, level:'단순 4M',           type4m:'Method',   name:'단순 라인 이동',                       desc:'공장의 동일 공간 내 검사 설비가 없는 라인을 대상으로 설비/지그 등의 변경이 없이 라인 합리화 등을 위한 단순이동 시 적용'},
+  {no:49, level:'단순 4M',           type4m:'Method',   name:'물류 변경',                           desc:'조달되는 부품의 운반 공급체계/방법 변경 시 적용 (공동물류, 서열납품, 중간창고 운영 등)'},
+  {no:50, level:'단순 4M',           type4m:'Method',   name:'포장 방법',                           desc:'포장 사양 및 방법의 변경 시 적용 (대차, Tray, Boxing 형상 및 재질 변경 등)'},
+  {no:51, level:'단순 4M',           type4m:'Method',   name:'설비 조건',                           desc:'제조 설비의 설비 조건이 변경될 경우 (기준 세팅값, 작업 순서, Cycle Time 등)'},
+  {no:52, level:'단순 4M',           type4m:'Method',   name:'작업 방법',                           desc:'특정 사유로 인해 단위 공정 내 작업 방법이 변경될 경우 적용'},
+  {no:53, level:'미신고(협력사 관리)', type4m:'Man',      name:'작업자 변경',                         desc:'일반 공정 작업자 변경 시 적용'},
+  {no:54, level:'미신고(협력사 관리)', type4m:'Man',      name:'외국인 작업자/신입/검사원 변동',         desc:'생산 시 외국인 작업자 투입/신입사원/검사원 변경 시 적용'},
+  {no:55, level:'미신고(협력사 관리)', type4m:'Man',      name:'주요 공정 작업자 변경',                desc:'주요/특수 공정 작업자 변경 (용접/Soldering/수도장 공정 등) 시 적용'},
+  {no:56, level:'미신고(협력사 관리)', type4m:'Man',      name:'외주 품질 담당자 변경',                desc:'2,3차 협력사 품질 책임자 변경 시 적용'},
+  {no:57, level:'미신고(협력사 관리)', type4m:'Machine',  name:'공구 교환',                          desc:'기존 사용하던 공구와 동일한 공구로 교환 시 적용'},
+  {no:58, level:'미신고(협력사 관리)', type4m:'Machine',  name:'금형 유지보수',                       desc:'수리/Spare part 교환 시 적용'},
+  {no:59, level:'미신고(협력사 관리)', type4m:'Machine',  name:'생산설비 유지보수',                    desc:'수리/Spare Part 교환 (기존 설비조건 유지) 시 적용'},
+  {no:60, level:'미신고(협력사 관리)', type4m:'Machine',  name:'생산용 지그 유지보수',                 desc:'수리/Spare part 교환 시 적용'},
+  {no:61, level:'미신고(협력사 관리)', type4m:'Machine',  name:'일반 계측기',                         desc:'일반 계측기 변경/교환 시 적용'},
+];
+
+// ═══════════════════════════════════════
+//  SUPABASE
+// ═══════════════════════════════════════
+const SUPABASE_URL = 'https://mbbzerxdyxiiwfmvbfns.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iYnplcnhkeXhpaXdmbXZiZm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzOTkxODIsImV4cCI6MjA5MTk3NTE4Mn0.8uqIFtHs7wBJVYQTGrnhQXho-I57GTOz1S8XGeLK2T0';
+const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function recToDb(r) {
+  return {
+    id: r.id,
+    date: r.date || null,
+    type4m: r.type4m || null,
+    report_std: r.reportStd || null,
+    change_item_no: r.changeItemNo || null,
+    change_desc: r.changeDesc || null,
+    dept: r.dept || null,
+    model_code: r.modelCode || null,
+    model_name: r.modelName || null,
+    part_code: r.partCode || null,
+    part_name: r.partName || null,
+    cust_part_no: r.custPartNo || null,
+    customer: r.customer || null,
+    part_type: r.partType || null,
+    before_content: r.before || null,
+    after_content: r.after || null,
+    assignee: r.assignee || null,
+    action_date: r.actionDate || null,
+    quality_check: r.qualityCheck || null,
+    status: r.status || null,
+    note: r.note || null,
+    photos_before: r.photosBefore || [],
+    photos_after: r.photosAfter || [],
+    created_at: r.createdAt || new Date().toISOString()
+  };
+}
+
+function dbToRec(d) {
+  return {
+    id: d.id,
+    date: d.date,
+    type4m: d.type4m,
+    reportStd: d.report_std,
+    changeItemNo: d.change_item_no,
+    changeDesc: d.change_desc,
+    dept: d.dept,
+    modelCode: d.model_code,
+    modelName: d.model_name,
+    partCode: d.part_code,
+    partName: d.part_name,
+    custPartNo: d.cust_part_no,
+    customer: d.customer,
+    partType: d.part_type,
+    before: d.before_content,
+    after: d.after_content,
+    assignee: d.assignee,
+    actionDate: d.action_date,
+    qualityCheck: d.quality_check,
+    status: d.status,
+    note: d.note,
+    photosBefore: d.photos_before || [],
+    photosAfter: d.photos_after || [],
+    createdAt: d.created_at
+  };
+}
+
+async function sbLoad() {
+  showDbLoading(true);
+  const { data, error } = await _sb.from('records').select('*').order('date', { ascending: false });
+  showDbLoading(false);
+  if (error) { console.error('Supabase load error:', error); showToast('⚠️ 데이터 로드 실패'); return; }
+  records = (data || []).map(dbToRec);
+}
+
+async function sbUpsert(rec) {
+  const { error } = await _sb.from('records').upsert(recToDb(rec));
+  if (error) { console.error('Supabase upsert error:', error); showToast('⚠️ 저장 실패: ' + error.message); }
+}
+
+async function sbDelete(id) {
+  const { error } = await _sb.from('records').delete().eq('id', id);
+  if (error) { console.error('Supabase delete error:', error); showToast('⚠️ 삭제 실패: ' + error.message); }
+}
+
+function showDbLoading(show) {
+  document.getElementById('dbLoadingOverlay').style.display = show ? 'flex' : 'none';
+}
+
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let records = [];
+let bomData = null;   // { masterList: [{code, productName, familyName, custPartNo, spec}] }
+let editingId = null;
+let deleteId = null;
+let photosBefore = [];   // base64 array
+let photosAfter  = [];   // base64 array
+let pendingAttachments = [];  // [{name, type, size, data: base64}]
+let _pvPhotos = [];
+let _pvIdx    = 0;
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+  // Set today's date in header
+  const now = new Date();
+  document.getElementById('headerDate').textContent =
+    now.toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric',weekday:'short'});
+
+  // Set default date in form
+  document.getElementById('regDate').value = now.toISOString().slice(0,10);
+
+  // 뷰 모드 초기화 (저장값 또는 화면 크기 자동 감지)
+  const savedMode = localStorage.getItem('4m_viewMode');
+  if (savedMode === 'mobile' || (!savedMode && window.innerWidth <= 768)) {
+    _isMobileMode = true;
+    applyViewMode();
+  }
+  window.addEventListener('resize', () => {
+    if (!localStorage.getItem('4m_viewMode')) {
+      // 사용자가 수동 변경하지 않은 경우만 자동 감지
+      const shouldMobile = window.innerWidth <= 768;
+      if (shouldMobile !== _isMobileMode) {
+        _isMobileMode = shouldMobile;
+        applyViewMode();
+      }
+    }
+  });
+
+  // BOM을 IndexedDB에서 복원
+  loadBomFromIDB();
+
+  // 업로드 카드 드래그앤드롭
+  const bomCard = document.getElementById('bomUploadCard');
+  if (bomCard) {
+    bomCard.addEventListener('dragover', e => { e.preventDefault(); bomCard.classList.add('drag'); });
+    bomCard.addEventListener('dragleave', () => bomCard.classList.remove('drag'));
+    bomCard.addEventListener('drop', e => {
+      e.preventDefault(); bomCard.classList.remove('drag');
+      if (e.dataTransfer.files[0]) handleBomFile(e.dataTransfer.files[0]);
+    });
+  }
+
+  // Paste images
+  document.addEventListener('paste', handlePaste);
+
+  // Supabase에서 데이터 로드 후 렌더
+  await sbLoad();
+  renderAll();
+});
+
+// ═══════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════
+let sidebarCollapsed = false;
+let _isMobileMode = false;
+
+function toggleViewMode() {
+  _isMobileMode = !_isMobileMode;
+  applyViewMode();
+  localStorage.setItem('4m_viewMode', _isMobileMode ? 'mobile' : 'pc');
+}
+
+function applyViewMode() {
+  if (_isMobileMode) {
+    document.body.classList.add('view-mobile');
+    document.getElementById('viewToggleBtn').textContent = '🖥️ PC';
+  } else {
+    document.body.classList.remove('view-mobile');
+    document.getElementById('viewToggleBtn').textContent = '📱 모바일';
+    closeDrawer();
+  }
+}
+
+function toggleDrawer() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const isOpen  = sidebar.classList.contains('drawer-open');
+  if (isOpen) {
+    sidebar.classList.remove('drawer-open');
+    overlay.classList.remove('open');
+  } else {
+    sidebar.classList.add('drawer-open');
+    overlay.classList.add('open');
+  }
+}
+
+function closeDrawer() {
+  document.getElementById('sidebar').classList.remove('drawer-open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+function switchLetterLang(lang) {
+  document.getElementById('letterKo').style.display = lang === 'ko' ? '' : 'none';
+  document.getElementById('letterEn').style.display = lang === 'en' ? '' : 'none';
+  document.getElementById('btnLangKo').className = lang === 'ko' ? 'btn btn-primary' : 'btn btn-outline';
+  document.getElementById('btnLangEn').className = lang === 'en' ? 'btn btn-primary' : 'btn btn-outline';
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.remove('active');
+    p.style.display = 'none';
+  });
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.m-nav-item2').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById('tab-' + name);
+  panel.style.display = name === 'model' || name === 'customer' ? 'flex' : 'block';
+  panel.classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  const mb = document.getElementById('mnav-' + name);
+  if (mb) mb.classList.add('active');
+  closeDrawer();
+  if (name === 'overview') renderOverview();
+  if (name === 'history') renderHistory();
+  if (name === 'model') renderModelView();
+  if (name === 'customer') renderCustomerView();
+  if (name === 'reportstd') renderReportStdView();
+}
+
+function toggleSidebar() {
+  sidebarCollapsed = !sidebarCollapsed;
+  document.getElementById('sidebar').classList.toggle('collapsed', sidebarCollapsed);
+  document.querySelector('.sidebar-toggle').textContent = sidebarCollapsed ? '▶' : '◀';
+}
+
+// ═══════════════════════════════════════
+//  BOM FILE HANDLING  (조립실적 통합관리 parseBomMaster 방식)
+// ═══════════════════════════════════════
+function handleBomFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const ab = e.target.result;
+      const masterList = parseBomMaster(ab);
+      if (!masterList.length) {
+        showToast('⚠️ BOM 파싱 결과가 없습니다. 파일 형식을 확인하세요.');
+        return;
+      }
+      const families = [...new Set(masterList.map(x => x.familyName).filter(Boolean))];
+      bomData = { masterList };
+      const loadTime = new Date().toLocaleString('ko-KR');
+      updateBomUI(file.name, loadTime);
+      saveBomToIDB({ version: 6, masterList, fileName: file.name, loadTime });
+      showToast(`✅ BOM 저장 완료 (${families.length}개 품종 · ${masterList.length}건) — 영구 보존`);
+    } catch(err) {
+      console.error(err);
+      showToast('❌ BOM 파싱 오류: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// 조립실적 통합관리와 동일한 BOM 파싱 로직
+function parseBomMaster(arrayBuffer) {
+  const wb = XLSX.read(new Uint8Array(arrayBuffer), { type:'array' });
+  const list = [];
+  const seen = new Set();
+
+  // 기준정보 시트 우선 탐색, 없으면 전체 시트 순회
+  const sheetOrder = [...wb.SheetNames].sort((a, b) => {
+    const pa = /기준정보|기준/.test(a) ? 0 : /제품코드|품목/.test(a) ? 1 : 2;
+    const pb = /기준정보|기준/.test(b) ? 0 : /제품코드|품목/.test(b) ? 1 : 2;
+    return pa - pb;
+  });
+
+  for (const sn of sheetOrder) {
+    const ws = wb.Sheets[sn];
+    if (!ws) continue;
+    const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+    if (!raw.length) continue;
+
+    // 헤더 행: 코드성 키워드 포함 + 가장 셀이 많은 행 (최대 15행 탐색)
+    let hi = 0, maxF = 0;
+    for (let i = 0; i < Math.min(15, raw.length); i++) {
+      const f = raw[i].filter(c => c !== '' && c != null).length;
+      const hasKw = raw[i].some(c => /코드|CODE|품번|품목|P\/N|PartNo/i.test(String(c)));
+      if (hasKw && f > maxF) { maxF = f; hi = i; }
+    }
+    if (maxF === 0) continue; // 코드 키워드가 없는 시트 스킵
+
+    const hdrs = raw[hi].map(c => String(c || '').trim().replace(/\s+/g, ''));
+    const fh = (...keys) => {
+      for (const k of keys) {
+        const kn = k.replace(/\s+/g, '').toLowerCase();
+        const idx = hdrs.findIndex(h => h.toLowerCase() === kn);
+        if (idx >= 0) return idx;
+      }
+      for (const k of keys) {
+        const kn = k.replace(/\s+/g, '').toLowerCase();
+        const idx = hdrs.findIndex(h => h.toLowerCase().includes(kn));
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
+
+    const iCode   = fh('품목코드','제품코드','자재코드','부품코드','품번','코드','CODE');
+    const iName   = fh('품목명','제품명','품명','NAME','명칭','모델명');
+    const iFamily = fh('품종명','품종','FAMILY','계열','제품군');
+    const iType   = fh('품목유형','유형','TYPE','구분','공정유형','품목구분');
+    const iPart   = fh('고객사P/N','고객P/N','고객사PartNo','CUSTPN','고객코드');
+    const iSpec   = fh('규격','SPEC','사양');
+    const iCust   = (() => {
+      let idx = hdrs.findIndex(h => h === '고객사' || h === '고객사명');
+      if (idx >= 0) return idx;
+      return hdrs.findIndex(h => h.includes('고객사') && !/P\/N|PART|NO|코드/i.test(h));
+    })();
+
+    if (iCode < 0) continue;
+
+    for (let i = hi + 1; i < raw.length; i++) {
+      const r = raw[i];
+      const code = String(r[iCode] || '').trim();
+      if (!code || seen.has(code)) continue;
+      seen.add(code);
+      list.push({
+        code,
+        productName: iName   >= 0 ? String(r[iName]   || '').trim() : '',
+        familyName:  iFamily >= 0 ? String(r[iFamily]  || '').trim() : '',
+        partType:    iType   >= 0 ? String(r[iType]    || '').trim() : '',
+        custPartNo:  iPart   >= 0 ? String(r[iPart]    || '').trim() : '',
+        spec:        iSpec   >= 0 ? String(r[iSpec]    || '').trim() : '',
+        customer:    iCust   >= 0 ? String(r[iCust]    || '').trim() : '',
+      });
+    }
+    if (list.length > 0) break; // 기준정보 시트 파싱 성공 시 중단
+  }
+  console.log('[BOM] masterList:', list.length, '건, 품종:', new Set(list.map(x=>x.familyName).filter(Boolean)).size, '개');
+  return list;
+}
+
+function updateBomUI(fileName, loadTime) {
+  const ml = bomData.masterList || [];
+  const families = [...new Set(ml.map(x => x.familyName).filter(Boolean))];
+
+  document.getElementById('bomDot').classList.add('loaded');
+  document.getElementById('bomStatusTxt').textContent = 'BOM 로드됨';
+
+  const card = document.getElementById('bomUploadCard');
+  if (card) {
+    card.classList.add('loaded');
+    document.getElementById('bomCardIcon').textContent = '✅';
+    document.getElementById('bomCardStatus').textContent = `${families.length}개 품종 · 품목 ${ml.length.toLocaleString()}건`;
+    document.getElementById('bomCardTime').textContent = loadTime;
+  }
+  const info = document.getElementById('bomDetailInfo');
+  if (info) {
+    info.style.display = 'block';
+    document.getElementById('bomDetailFile').textContent = fileName;
+    document.getElementById('bomDetailModels').textContent = `${families.length}개`;
+    document.getElementById('bomDetailParts').textContent = `${ml.length.toLocaleString()}건`;
+    document.getElementById('bomDetailTime').textContent = loadTime;
+  }
+  populateModelSelects();
+}
+
+let _modelFamilies = [];
+
+function populateModelSelects() {
+  if (!bomData) return;
+  const families = [...new Set((bomData.masterList || []).map(x => x.familyName).filter(Boolean))].sort();
+  _modelFamilies = families;
+
+  ['filterModel','modelViewFilter'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const firstOpt = sel.options[0];
+    sel.innerHTML = '';
+    sel.appendChild(firstOpt);
+    families.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f;
+      opt.textContent = f;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+function openModelDropdown() {
+  filterModelDropdown();
+}
+
+function closeModelDropdown() {
+  const dd = document.getElementById('regModelDropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function filterModelDropdown() {
+  const input = document.getElementById('regModelInput');
+  const dropdown = document.getElementById('regModelDropdown');
+  if (!input || !dropdown) return;
+  const q = input.value.toLowerCase();
+  const list = _modelFamilies.length ? _modelFamilies
+    : [...new Set(records.map(r => r.modelName || r.modelCode).filter(Boolean))].sort();
+  const filtered = q ? list.filter(f => f.toLowerCase().includes(q)) : list;
+  if (!filtered.length) { dropdown.style.display = 'none'; return; }
+  dropdown.innerHTML = filtered.map(f =>
+    `<div onclick="selectModelOption('${f.replace(/'/g,"\\'")}')"
+      style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f4f8"
+      onmouseover="this.style.background='#f0f5ff'" onmouseout="this.style.background=''">
+      ${esc(f)}
+    </div>`
+  ).join('');
+  dropdown.style.display = 'block';
+}
+
+function selectModelOption(family) {
+  document.getElementById('regModelInput').value = family;
+  document.getElementById('regModel').value = family;
+  document.getElementById('regModelDropdown').style.display = 'none';
+  onModelChange();
+}
+
+
+// ═══════════════════════════════════════
+//  MODEL → PART CASCADE  (조립실적 통합관리 방식)
+// ═══════════════════════════════════════
+function onModelChange() {
+  const family  = document.getElementById('regModel').value;
+  const typeSel = document.getElementById('regPartType');
+  document.getElementById('regPartCode').value   = '';
+  document.getElementById('regCustPartNo').value = '';
+  document.getElementById('regCustomer').value   = '';
+  document.getElementById('regPart').value       = '';
+  document.getElementById('regPartInput').value  = '';
+  _partItems = [];
+
+  // 품목유형 드롭다운: 해당 품종에 실제 존재하는 유형만 동적으로 생성
+  typeSel.innerHTML = '<option value="">선택</option>';
+  if (family && bomData && bomData.masterList) {
+    const types = [...new Set(
+      bomData.masterList
+        .filter(x => x.familyName === family && x.partType)
+        .map(x => x.partType)
+    )].sort();
+    types.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t; opt.textContent = t;
+      typeSel.appendChild(opt);
+    });
+  }
+  // BOM에 유형 데이터가 없으면 기본 옵션 유지
+  if (typeSel.options.length <= 1) {
+    ['조립','사출','도장','인쇄','구매','금형','설비','기타'].forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t; opt.textContent = t;
+      typeSel.appendChild(opt);
+    });
+  }
+}
+
+let _partItems = [];
+
+function onPartTypeChange() {
+  const family   = document.getElementById('regModel').value;
+  const partType = document.getElementById('regPartType').value;
+  _partItems = [];
+  document.getElementById('regPart').value       = '';
+  document.getElementById('regPartInput').value  = '';
+  document.getElementById('regPartCode').value   = '';
+  document.getElementById('regCustPartNo').value = '';
+  document.getElementById('regCustomer').value   = '';
+  closePartDropdown();
+
+  if (!family || !bomData || !bomData.masterList) return;
+
+  let items = bomData.masterList.filter(x => x.familyName === family);
+  if (partType) {
+    const hasTypeData = items.some(x => x.partType);
+    if (hasTypeData) {
+      items = items.filter(x =>
+        x.partType === partType ||
+        x.partType.includes(partType) ||
+        partType.includes(x.partType)
+      );
+    }
+  }
+  items.sort((a, b) => (a.productName || a.code).localeCompare(b.productName || b.code));
+  _partItems = items.map(x => ({
+    code: x.code,
+    name: x.productName || x.code,
+    custPartNo: x.custPartNo || '',
+    customer: x.customer || ''
+  }));
+}
+
+function renderPartDropdown(items) {
+  const dd = document.getElementById('regPartDropdown');
+  if (!items.length) {
+    dd.innerHTML = '<div style="padding:10px 14px;color:#94a3b8;font-size:12px">검색 결과 없음</div>';
+  } else {
+    dd.innerHTML = items.map(x => `
+      <div onmousedown="selectPart('${esc(x.code)}','${esc(x.name)}','${esc(x.custPartNo)}','${esc(x.customer)}')"
+        style="padding:8px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f4f8"
+        onmouseover="this.style.background='#eef3ff'" onmouseout="this.style.background=''">
+        <div style="font-weight:600;color:#1a3c6e">${esc(x.name)}</div>
+        <div style="font-size:11px;color:#64748b">${esc(x.code)}${x.custPartNo ? ' | ' + esc(x.custPartNo) : ''}</div>
+      </div>`).join('');
+  }
+  dd.style.display = 'block';
+}
+
+function openPartDropdown() {
+  if (!_partItems.length) return;
+  const q = document.getElementById('regPartInput').value.toLowerCase();
+  const filtered = q ? _partItems.filter(x => x.name.toLowerCase().includes(q) || x.code.toLowerCase().includes(q)) : _partItems;
+  renderPartDropdown(filtered);
+}
+
+function filterPartDropdown() {
+  const q = document.getElementById('regPartInput').value.toLowerCase();
+  if (!q) {
+    renderPartDropdown(_partItems);
+    return;
+  }
+  const filtered = _partItems.filter(x => x.name.toLowerCase().includes(q) || x.code.toLowerCase().includes(q));
+  renderPartDropdown(filtered);
+}
+
+function closePartDropdown() {
+  const dd = document.getElementById('regPartDropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function selectPart(code, name, custPartNo, customer) {
+  document.getElementById('regPart').value       = code;
+  document.getElementById('regPartInput').value  = name;
+  document.getElementById('regPartCode').value   = code;
+  document.getElementById('regCustPartNo').value = custPartNo;
+  document.getElementById('regCustomer').value   = customer;
+  closePartDropdown();
+}
+
+
+// ═══════════════════════════════════════
+//  ATTACHMENT HANDLERS
+// ═══════════════════════════════════════
+function handleAttachFiles(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  let loaded = 0;
+  files.forEach(f => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      pendingAttachments.push({ name: f.name, type: f.type, size: f.size, data: e.target.result });
+      if (++loaded === files.length) renderAttachList();
+    };
+    reader.readAsDataURL(f);
+  });
+  input.value = '';
+}
+
+function renderAttachList() {
+  const el = document.getElementById('attachFileList');
+  if (!el) return;
+  if (!pendingAttachments.length) { el.innerHTML = ''; return; }
+  el.innerHTML = pendingAttachments.map((f, i) => `
+    <div class="attach-item">
+      <span style="font-size:15px">${fileIcon(f.type)}</span>
+      <span class="att-name">${esc(f.name)}</span>
+      <span class="att-size">${formatFileSize(f.size)}</span>
+      <button class="att-del" onclick="removeAttachment(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeAttachment(idx) {
+  pendingAttachments.splice(idx, 1);
+  renderAttachList();
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + 'B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+  return (bytes / 1024 / 1024).toFixed(1) + 'MB';
+}
+
+function fileIcon(type) {
+  if (!type) return '📄';
+  if (type.startsWith('image/')) return '🖼️';
+  if (type.includes('pdf')) return '📕';
+  if (type.includes('word') || type.includes('document')) return '📝';
+  if (type.includes('excel') || type.includes('sheet')) return '📊';
+  if (type.includes('zip') || type.includes('compressed')) return '🗜️';
+  return '📄';
+}
+
+// ═══════════════════════════════════════
+//  PHOTO UPLOAD (다중 사진)
+// ═══════════════════════════════════════
+function addPhotos(type, input) {
+  const arr = type === 'before' ? photosBefore : photosAfter;
+  Array.from(input.files).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = e => { arr.push(e.target.result); renderPhotoGrid(type); };
+    reader.readAsDataURL(f);
+  });
+  input.value = '';
+}
+
+function removePhoto(type, idx) {
+  const arr = type === 'before' ? photosBefore : photosAfter;
+  arr.splice(idx, 1);
+  renderPhotoGrid(type);
+}
+
+function renderPhotoGrid(type) {
+  const arr  = type === 'before' ? photosBefore : photosAfter;
+  const grid = document.getElementById(type === 'before' ? 'photoGridBefore' : 'photoGridAfter');
+  if (!grid) return;
+  grid.innerHTML = arr.map((src, i) => `
+    <div class="multi-thumb">
+      <img src="${src}" onclick="event.stopPropagation();openPhotoViewerArr(${JSON.stringify(arr)},${i})" title="클릭하여 크게 보기">
+      <button class="mth-del" onclick="event.stopPropagation();removePhoto('${type}',${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+// 현재 Ctrl+V 붙여넣기 대상 ('before' | 'after')
+let pasteTarget = 'before';
+
+function setPasteTarget(type, e) {
+  if (e && (e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL')) return;
+  pasteTarget = type;
+  document.getElementById('photoSectionBefore').classList.toggle('paste-target', type === 'before');
+  document.getElementById('photoSectionAfter').classList.toggle('paste-target', type === 'after');
+  document.getElementById('pasteHintBefore').textContent = type === 'before' ? '📌 붙여넣기 활성' : '';
+  document.getElementById('pasteHintAfter').textContent  = type === 'after'  ? '📌 붙여넣기 활성' : '';
+}
+
+function handlePaste(e) {
+  if (!document.getElementById('regModal').classList.contains('open')) return;
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const arr = pasteTarget === 'before' ? photosBefore : photosAfter;
+        arr.push(ev.target.result);
+        renderPhotoGrid(pasteTarget);
+      };
+      reader.readAsDataURL(item.getAsFile());
+      break;
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+//  변경 항목 드롭다운 관련
+// ═══════════════════════════════════════
+function onReg4mChange() {
+  const type4m = document.getElementById('reg4m').value;
+  const sel    = document.getElementById('regChangeItem');
+
+  sel.innerHTML = '<option value="">-- 항목을 선택하세요 --</option>';
+  document.getElementById('regReportStd').value    = '';
+  document.getElementById('regChangeItemNo').value = '';
+  document.getElementById('regChangeDesc').value   = '';
+
+  if (!type4m) { document.getElementById('changeItemGroup').style.display = 'none'; return; }
+
+  const items = CHANGE_ITEMS.filter(it => it.type4m === type4m);
+  items.forEach(it => {
+    const opt = document.createElement('option');
+    opt.value = it.no;
+    opt.textContent = `${it.no}. [${it.level}] ${it.name}`;
+    sel.appendChild(opt);
+  });
+  document.getElementById('changeItemGroup').style.display = '';
+}
+
+function onChangeItemSelect() {
+  const no = parseInt(document.getElementById('regChangeItem').value);
+  if (!no) return;
+
+  const item = CHANGE_ITEMS.find(it => it.no === no);
+  if (!item) return;
+
+  document.getElementById('regReportStd').value    = item.level;
+  document.getElementById('regChangeItemNo').value = item.no;
+
+  // 변경내용 항상 업데이트
+  document.getElementById('regChangeDesc').value = item.desc;
+
+  // 발생항목 자동입력 (비어 있을 때만)
+  const beforeEl = document.getElementById('regBefore');
+  if (!beforeEl.value.trim()) beforeEl.value = item.name;
+}
+
+function resetChangeItemFields() {
+  document.getElementById('regChangeItem').innerHTML = '<option value="">-- 4M 유형 선택 후 항목을 선택하세요 --</option>';
+  document.getElementById('changeItemGroup').style.display = 'none';
+  document.getElementById('regReportStd').value    = '';
+  document.getElementById('regChangeItemNo').value = '';
+  document.getElementById('regChangeDesc').value   = '';
+}
+
+function restoreChangeItemFields(type4m, itemNo) {
+  if (!type4m) return;
+  document.getElementById('reg4m').value = type4m;
+  onReg4mChange();
+  if (!itemNo) return;
+  document.getElementById('regChangeItem').value = itemNo;
+  onChangeItemSelect();
+}
+
+// ═══════════════════════════════════════
+//  REGISTRATION MODAL
+// ═══════════════════════════════════════
+function openRegModal(id) {
+  editingId = id || null;
+  photosBefore = []; photosAfter = [];
+
+  // Reset form
+  document.getElementById('regDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('reg4m').value = '';
+  document.getElementById('regDept').value = '';
+  document.getElementById('regModel').value = '';
+  document.getElementById('regModelInput').value = '';
+  document.getElementById('regPart').value      = '';
+  document.getElementById('regPartInput').value = '';
+  _partItems = [];
+  document.getElementById('regPartCode').value   = '';
+  document.getElementById('regCustPartNo').value = '';
+  document.getElementById('regCustomer').value   = '';
+  document.getElementById('regPartType').value   = '';
+  document.getElementById('regAssignee').value = '';
+  document.getElementById('regActionDate').value = '';
+  document.getElementById('regQualityCheck').value = '';
+  document.getElementById('regBefore').value = '';
+  document.getElementById('regAfter').value = '';
+  document.getElementById('regStatus').value = '대기';
+  document.getElementById('regNote').value = '';
+  resetChangeItemFields();
+  renderPhotoGrid('before'); renderPhotoGrid('after');
+  pendingAttachments = [];
+  renderAttachList();
+  // 붙여넣기 대상 초기화 → 변경전 박스
+  pasteTarget = 'before';
+  setTimeout(() => setPasteTarget('before', null), 50);
+
+  if (id) {
+    // Edit mode
+    const rec = records.find(r => r.id === id);
+    if (!rec) return;
+    document.getElementById('regModalTitle').textContent = '✏️ 변동점 수정';
+    document.getElementById('regDate').value = rec.date;
+    document.getElementById('regDept').value = rec.dept || '';
+    if (rec.changeItemNo) {
+      restoreChangeItemFields(rec.type4m, rec.changeItemNo);
+      // 저장된 변경내용으로 덮어쓰기 (자동입력값 대신 수정된 내용 복원)
+      if (rec.changeDesc) document.getElementById('regChangeDesc').value = rec.changeDesc;
+    } else {
+      document.getElementById('reg4m').value = rec.type4m || '';
+      onReg4mChange();
+    }
+    document.getElementById('regPartCode').value   = rec.partCode    || '';
+    document.getElementById('regCustPartNo').value = rec.custPartNo  || '';
+    document.getElementById('regCustomer').value   = rec.customer    || '';
+    document.getElementById('regPartType').value   = rec.partType    || '';
+    document.getElementById('regAssignee').value = rec.assignee || '';
+    document.getElementById('regActionDate').value = rec.actionDate || '';
+    document.getElementById('regQualityCheck').value = rec.qualityCheck || '';
+    document.getElementById('regBefore').value = rec.before;
+    document.getElementById('regAfter').value = rec.after;
+    document.getElementById('regStatus').value = rec.status;
+    document.getElementById('regNote').value = rec.note || '';
+    photosBefore = Array.isArray(rec.photosBefore) ? [...rec.photosBefore] : (rec.photoBefore ? [rec.photoBefore] : []);
+    photosAfter  = Array.isArray(rec.photosAfter)  ? [...rec.photosAfter]  : (rec.photoAfter  ? [rec.photoAfter]  : []);
+    renderPhotoGrid('before'); renderPhotoGrid('after');
+    loadAttachmentsFromIDB(id, files => { pendingAttachments = files; renderAttachList(); });
+    // Populate model/part
+    const familyVal = rec.modelName || rec.modelCode || '';
+    document.getElementById('regModel').value = familyVal;
+    document.getElementById('regModelInput').value = familyVal;
+    if (familyVal) {
+      document.getElementById('regPartType').value = rec.partType || '';
+      onPartTypeChange();
+      document.getElementById('regPart').value       = rec.partCode  || '';
+      document.getElementById('regPartInput').value  = rec.partName  || rec.partCode || '';
+      document.getElementById('regPartCode').value   = rec.partCode  || '';
+      document.getElementById('regCustPartNo').value = rec.custPartNo || '';
+      document.getElementById('regCustomer').value   = rec.customer  || '';
+    }
+  } else {
+    document.getElementById('regModalTitle').textContent = '📝 변동점 등록';
+  }
+
+  if (bomData) populateModelSelects();
+  document.getElementById('regModal').classList.add('open');
+}
+
+function resetPhotoBox(type) {
+  const boxId = type === 'before' ? 'uploadBoxBefore' : 'uploadBoxAfter';
+  const contentId = type === 'before' ? 'uploadBeforeContent' : 'uploadAfterContent';
+  document.getElementById(boxId).classList.remove('has-img');
+  document.getElementById(contentId).innerHTML = `
+    <div class="upload-icon">📷</div>
+    <div class="upload-label">클릭하거나 붙여넣기(Ctrl+V)</div>
+  `;
+}
+
+function closeRegModal() {
+  document.getElementById('regModal').classList.remove('open');
+  editingId = null;
+}
+
+function saveRecord() {
+  const date    = document.getElementById('regDate').value;
+  const type4m  = document.getElementById('reg4m').value;
+  const before  = document.getElementById('regBefore').value.trim();
+  const after   = document.getElementById('regAfter').value.trim();
+
+  if (!date || !type4m || !before || !after) {
+    showToast('⚠️ 필수 항목을 입력하세요 (등록일, 4M유형, 변경전/후 내용)');
+    return;
+  }
+
+  const modelCode = document.getElementById('regModel').value;
+  const modelName = document.getElementById('regModelInput').value.trim();
+  const partCode  = document.getElementById('regPart').value;
+  const partName  = document.getElementById('regPartInput').value.trim();
+
+  const changeItemNo = document.getElementById('regChangeItemNo').value;
+  const reportStd    = document.getElementById('regReportStd').value;
+  const changeDesc   = document.getElementById('regChangeDesc').value.trim();
+
+  const rec = {
+    id:         editingId || Date.now().toString(),
+    date,
+    type4m,
+    reportStd,
+    changeItemNo: changeItemNo ? parseInt(changeItemNo) : null,
+    changeDesc,
+    dept:       document.getElementById('regDept').value,
+    modelCode,
+    modelName,
+    partCode,
+    partName,
+    custPartNo: document.getElementById('regCustPartNo').value.trim(),
+    customer:   document.getElementById('regCustomer').value.trim(),
+    partType:   document.getElementById('regPartType').value,
+    before,
+    after,
+    assignee:     document.getElementById('regAssignee').value.trim(),
+    actionDate:   document.getElementById('regActionDate').value,
+    qualityCheck: document.getElementById('regQualityCheck').value,
+    status:     document.getElementById('regStatus').value,
+    note:       document.getElementById('regNote').value.trim(),
+    photosBefore: photosBefore.slice(),
+    photosAfter:  photosAfter.slice(),
+    createdAt:  editingId ? (records.find(r=>r.id===editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
+  };
+
+  if (editingId) {
+    const idx = records.findIndex(r => r.id === editingId);
+    if (idx >= 0) records[idx] = rec;
+  } else {
+    records.unshift(rec);
+  }
+
+  saveAttachmentsToIDB(rec.id, pendingAttachments);
+  sbUpsert(rec);
+  closeRegModal();
+  renderAll();
+  showToast(editingId ? '✅ 변동점 수정 완료' : '✅ 변동점 등록 완료');
+}
+
+function saveRecords() { /* Supabase로 대체됨 */ }
+
+// ═══════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════
+function renderAll() {
+  syncModelViewFilter();
+  renderOverview();
+  renderHistory();
+  renderModelView();
+}
+
+function syncModelViewFilter() {
+  // BOM 없을 때 records에서 모델명 수집해 modelViewFilter에도 반영
+  const sel = document.getElementById('modelViewFilter');
+  if (!sel) return;
+  const cur = sel.value;
+  const models = [...new Set(records.map(r => r.modelName || r.modelCode).filter(Boolean))].sort();
+  // BOM 로드된 경우 populateModelSelects가 이미 채워줌 → BOM 없을 때만 채우기
+  if (!bomData && models.length) {
+    sel.innerHTML = '<option value="">전체 품종</option>' +
+      models.map(m => `<option value="${esc(m)}" ${m===cur?'selected':''}>${esc(m)}</option>`).join('');
+  }
+}
+
+function renderOverview() {
+  const total    = records.length;
+  const done     = records.filter(r => r.status === '완료').length;
+  const waiting  = records.filter(r => r.status === '대기').length;
+  const progress = records.filter(r => r.status === '진행중').length;
+  const delayed  = records.filter(r => r.status === '지연').length;
+  const rate     = total ? Math.round(done/total*100) : 0;
+
+  document.getElementById('statRow').innerHTML = `
+    <div class="stat-card blue"><div class="stat-num">${total}</div><div class="stat-lbl">총 변동건수</div></div>
+    <div class="stat-card green"><div class="stat-num">${done}</div><div class="stat-lbl">완료</div></div>
+    <div class="stat-card orange"><div class="stat-num">${waiting}</div><div class="stat-lbl">대기</div></div>
+    <div class="stat-card purple"><div class="stat-num">${progress}</div><div class="stat-lbl">진행중</div></div>
+    <div class="stat-card red"><div class="stat-num">${delayed}</div><div class="stat-lbl">지연</div></div>
+    <div class="stat-card ${rate>=80?'green':rate>=50?'orange':'red'}">
+      <div class="stat-num">${rate}%</div><div class="stat-lbl">완료율</div>
+    </div>
+  `;
+
+  // 4M Chart
+  const cnt4m = {Man:0,Machine:0,Material:0,Method:0};
+  records.forEach(r => { if(cnt4m[r.type4m]!==undefined) cnt4m[r.type4m]++; });
+  const max4m = Math.max(...Object.values(cnt4m), 1);
+  document.getElementById('chart4M').innerHTML = Object.entries(cnt4m).map(([k,v]) => `
+    <div class="bar-item">
+      <div class="bar-label">${k}</div>
+      <div class="bar-track"><div class="bar-fill bar-${k.toLowerCase()}" style="width:${Math.round(v/max4m*100)}%">${v>0?v:''}</div></div>
+      <div class="bar-val">${v}</div>
+    </div>
+  `).join('');
+
+  // Month Chart
+  const monthCnt = {};
+  const now = new Date();
+  for (let i=5; i>=0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    monthCnt[key] = 0;
+  }
+  records.forEach(r => {
+    const key = r.date?.slice(0,7);
+    if (key && monthCnt[key] !== undefined) monthCnt[key]++;
+  });
+  const maxM = Math.max(...Object.values(monthCnt), 1);
+  document.getElementById('chartMonth').innerHTML = Object.entries(monthCnt).map(([k,v]) => `
+    <div class="bar-item">
+      <div class="bar-label" style="width:70px;font-size:11px">${k.slice(5)}월</div>
+      <div class="bar-track"><div class="bar-fill bar-man" style="width:${Math.round(v/maxM*100)}%">${v>0?v:''}</div></div>
+      <div class="bar-val">${v}</div>
+    </div>
+  `).join('');
+
+  // Recent table (top 10)
+  const recent = records.slice(0,10);
+  const tbody = document.getElementById('overviewTbody');
+  if (recent.length === 0) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="12">등록된 변동점이 없습니다. [+ 변동점 등록] 버튼을 클릭하여 등록하세요.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = recent.map((r,i) => `
+    <tr style="cursor:pointer" onclick="openDetailModal('${r.id}')">
+      <td>${i+1}</td>
+      <td>${r.date}</td>
+      <td style="font-size:11px;font-weight:700">${r.dept||'-'}</td>
+      <td>${badge4m(r.type4m)}</td>
+      <td style="font-size:11px">${r.modelName||r.modelCode||'-'}</td>
+      <td style="font-size:11px">${r.partName||'-'}</td>
+      <td style="font-size:11px">${r.customer||'-'}</td>
+      <td class="td-wrap">${esc(r.before)}</td>
+      <td class="td-wrap">${esc(r.after)}</td>
+      <td>${photoThumb(r,'before')}</td>
+      <td>${photoThumb(r,'after')}</td>
+      <td>${signalBadge(r.status)}</td>
+      <td><button class="btn-sm-edit" onclick="event.stopPropagation();openRegModal('${r.id}')">수정</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderHistory() {
+  const fDept  = document.getElementById('filterDept').value;
+  const f4m    = document.getElementById('filter4m').value;
+  const fModel = document.getElementById('filterModel').value;
+  const fStat  = document.getElementById('filterStatus').value;
+  const fFrom  = document.getElementById('filterFrom').value;
+  const fTo    = document.getElementById('filterTo').value;
+
+  let filtered = records.filter(r => {
+    if (fDept  && r.dept !== fDept) return false;
+    if (f4m    && r.type4m !== f4m) return false;
+    if (fModel && r.modelCode !== fModel) return false;
+    if (fStat  && r.status !== fStat) return false;
+    if (fFrom  && r.date < fFrom) return false;
+    if (fTo    && r.date > fTo) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('historyTbody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="17">조건에 맞는 이력이 없습니다.</td></tr>';
+    document.getElementById('historyFoot').innerHTML = '<td colspan="16">합계: 0건</td>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((r,i) => `
+    <tr style="cursor:pointer" onclick="openDetailModal('${r.id}')">
+      <td>${i+1}</td>
+      <td>${r.date}</td>
+      <td style="font-size:11px;font-weight:700">${r.dept||'-'}</td>
+      <td>${badge4m(r.type4m)}</td>
+      <td style="font-size:11px;white-space:nowrap">${esc(_rvGetLevel(r)||'-')}</td>
+      <td style="font-size:11px">${r.modelCode||'-'}</td>
+      <td style="font-size:11px">${r.modelName||'-'}</td>
+      <td style="font-size:11px">${r.partCode||'-'}</td>
+      <td style="font-size:11px">${r.partName||'-'}</td>
+      <td style="font-size:11px">${r.customer||'-'}</td>
+      <td class="td-wrap">${esc(r.before)}</td>
+      <td class="td-wrap">${esc(r.after)}</td>
+      <td>${photoThumb(r,'before')}</td>
+      <td>${photoThumb(r,'after')}</td>
+      <td>${signalBadge(r.status)}</td>
+      <td class="td-wrap" style="max-width:120px">${esc(r.note||'-')}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-sm-edit" onclick="event.stopPropagation();openDetailModal('${r.id}')">상세</button>
+        <button class="btn-sm-edit" onclick="event.stopPropagation();openRegModal('${r.id}')" style="margin-left:2px">수정</button>
+        <button class="btn-sm-del"  onclick="event.stopPropagation();askDelete('${r.id}')" style="margin-left:2px">삭제</button>
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('historyFoot').innerHTML =
+    `<td colspan="16">합계: ${filtered.length}건 &nbsp;|&nbsp; 완료: ${filtered.filter(r=>r.status==='완료').length}건 &nbsp;|&nbsp; 완료율: ${filtered.length?Math.round(filtered.filter(r=>r.status==='완료').length/filtered.length*100):0}%</td>`;
+}
+
+// ═══════════════════════════════════════
+//  모델별 변동점 관리 뷰
+// ═══════════════════════════════════════
+let _mvSelectedModel = null;
+
+function renderModelView() {
+  const search = (document.getElementById('mvSearch')?.value || '').toLowerCase();
+
+  // 모델 목록: 실제 등록된 records의 품종만 표시
+  const modelSet = new Set();
+  records.forEach(r => { if (r.modelName) modelSet.add(r.modelName); else if (r.modelCode) modelSet.add(r.modelCode); });
+
+  const allModels = [...modelSet].sort();
+  const filtered = search ? allModels.filter(m => m.toLowerCase().includes(search)) : allModels;
+
+  // 모델별 미처리(비완료) 건수
+  const pendingMap = {};
+  records.forEach(r => {
+    const key = r.modelName || r.modelCode || '';
+    if (!key) return;
+    if (r.status !== '완료') pendingMap[key] = (pendingMap[key] || 0) + 1;
+  });
+
+  // 선택 모델이 필터된 목록에 없으면 초기화
+  if (_mvSelectedModel && !filtered.includes(_mvSelectedModel)) _mvSelectedModel = null;
+  if (!_mvSelectedModel && filtered.length) _mvSelectedModel = filtered[0];
+
+  // 좌측 모델 목록 렌더
+  const listEl = document.getElementById('mvModelList');
+  if (listEl) {
+    listEl.innerHTML = filtered.map(m => {
+      const pending = pendingMap[m] || 0;
+      const isActive = m === _mvSelectedModel;
+      const badge = pending > 0
+        ? `<span style="font-size:10px;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-weight:700">미처리 ${pending}</span>`
+        : `<span style="font-size:10px;background:#dcfce7;color:#16a34a;border-radius:10px;padding:1px 6px;font-weight:600">양호</span>`;
+      return `<div onclick="mvSelectModel('${esc(m)}')" style="
+        display:flex;align-items:center;justify-content:space-between;
+        padding:9px 14px;cursor:pointer;font-size:13px;font-weight:600;
+        border-left:3px solid ${isActive ? '#1a3c6e' : 'transparent'};
+        background:${isActive ? '#1a3c6e' : 'transparent'};
+        color:${isActive ? '#fff' : '#374151'};
+        transition:all .15s
+      ">${esc(m)} ${badge}</div>`;
+    }).join('') || '<div style="padding:14px;color:#94a3b8;font-size:12px">모델 없음</div>';
+  }
+
+  // 우측 내용 렌더
+  renderMvContent();
+}
+
+function mvSelectModel(model) {
+  _mvSelectedModel = model;
+  renderModelView();
+}
+
+function renderMvContent() {
+  const el = document.getElementById('mvContent');
+  if (!el) return;
+
+  if (!_mvSelectedModel) {
+    el.innerHTML = '<div style="color:#94a3b8;font-size:14px;padding:40px 0;text-align:center">← 왼쪽에서 모델을 선택하세요</div>';
+    return;
+  }
+
+  const modelRecs = records.filter(r => (r.modelName || r.modelCode) === _mvSelectedModel);
+
+  // 품목별 그룹핑
+  const partMap = new Map();
+  modelRecs.forEach(r => {
+    const pk = r.partCode || r.partName || '(품목 미지정)';
+    if (!partMap.has(pk)) partMap.set(pk, { partName: r.partName || '', partCode: r.partCode || '', recs: [] });
+    partMap.get(pk).recs.push(r);
+  });
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:18px;font-weight:700;color:#1a3c6e">${esc(_mvSelectedModel)}</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="downloadMvExcel()" style="font-size:12px;padding:6px 14px;background:#fff;color:#217346;border-color:#217346">📥 Excel 다운로드</button>
+      <button class="btn btn-primary" onclick="openRegModal()" style="font-size:12px;padding:6px 14px">+ 변동점 등록</button>
+    </div>
+  </div>`;
+
+  if (partMap.size === 0) {
+    // 품목 없이 직접 등록된 레코드 표시
+    if (modelRecs.length === 0) {
+      html += '<div style="color:#94a3b8;text-align:center;padding:40px 0">이 모델에 등록된 변동점이 없습니다.</div>';
+    } else {
+      html += renderMvTable(modelRecs);
+    }
+  } else {
+    partMap.forEach((info, pk) => {
+      const recs = info.recs.sort((a,b) => b.date.localeCompare(a.date));
+      const latest = recs[0];
+      const pending = recs.filter(r => r.status !== '완료').length;
+      const statusColor = pending > 0 ? '#f59e0b' : '#10b981';
+      const statusText  = latest.status || '-';
+      const custPn = bomData?.masterList?.find(x => x.code === info.partCode)?.custPartNo || '';
+
+      html += `<div onclick="mvTogglePart('${esc(pk)}')" style="
+        background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+        padding:14px 18px;margin-bottom:10px;cursor:pointer;
+        transition:box-shadow .15s;
+      " onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:700;color:#1a3c6e;margin-bottom:4px">${esc(info.partName || pk)}</div>
+            <div style="font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${info.partCode ? `제품코드: ${esc(info.partCode)}` : ''}
+              ${custPn ? ` | 고객사P/N: ${esc(custPn)}` : ''}
+              ${latest.date ? ` | 최근 발생: ${latest.date}` : ''}
+              ${latest.before ? ` | ${esc(latest.before.slice(0,40))}${latest.before.length>40?'…':''}` : ''}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <span style="font-size:12px;font-weight:600;color:${statusColor}">${statusText}</span>
+            <span style="background:${pending>0?'#fef3c7':'#dcfce7'};color:${pending>0?'#92400e':'#15803d'};
+              border-radius:12px;padding:2px 10px;font-size:12px;font-weight:700">${recs.length}건</span>
+            <span style="color:#94a3b8">›</span>
+          </div>
+        </div>
+        <!-- 펼쳐지는 상세 테이블 -->
+        <div id="mvPart_${btoa(pk).replace(/[^a-zA-Z0-9]/g,'')}" style="display:none;margin-top:14px">
+          ${renderMvTable(recs)}
+        </div>
+      </div>`;
+    });
+  }
+
+  el.innerHTML = html;
+}
+
+async function downloadMvExcel() {
+  if (!_mvSelectedModel) return;
+  const modelRecs = records.filter(r => (r.modelName || r.modelCode) === _mvSelectedModel);
+  if (modelRecs.length === 0) { alert('다운로드할 데이터가 없습니다.'); return; }
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('변동점이력');
+
+  ws.columns = [
+    { width: 5 }, { width: 13 }, { width: 28 }, { width: 12 }, { width: 12 },
+    { width: 13 }, { width: 28 }, { width: 12 }, { width: 12 }
+  ];
+
+  const partMap = new Map();
+  modelRecs.forEach(r => {
+    const pk = r.partCode || r.partName || '(품목 미지정)';
+    if (!partMap.has(pk)) partMap.set(pk, { partName: r.partName || pk, partCode: r.partCode || '', recs: [] });
+    partMap.get(pk).recs.push(r);
+  });
+
+  let ri = 1;
+
+  // 모델명 타이틀
+  ws.mergeCells(`A${ri}:I${ri}`);
+  const tr = ws.getRow(ri);
+  tr.getCell(1).value = _mvSelectedModel;
+  tr.getCell(1).font = { bold: true, size: 14, color: { argb: 'FF0D2B5E' } };
+  tr.getCell(1).fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFEEF3FF' } };
+  tr.getCell(1).alignment = { horizontal:'left', vertical:'middle' };
+  tr.height = 26;
+  ri++;
+
+  const borderThin = (color='FFE2E8F0') => ({
+    top:{style:'thin',color:{argb:color}}, bottom:{style:'thin',color:{argb:color}},
+    left:{style:'thin',color:{argb:color}}, right:{style:'thin',color:{argb:color}}
+  });
+
+  const setCell = (row, col, value, opts = {}) => {
+    const c = row.getCell(col);
+    c.value = value;
+    if (opts.bold)      c.font = { ...(c.font||{}), bold: true, size: opts.fontSize||11, color: { argb: opts.fontColor||'FF000000' } };
+    else                c.font = { size: opts.fontSize||10, color: { argb: opts.fontColor||'FF000000' } };
+    if (opts.bg)        c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb: opts.bg } };
+    c.alignment = { horizontal: opts.align||'center', vertical:'middle', wrapText:!!opts.wrap };
+    c.border = borderThin(opts.borderColor||'FFD0D9E8');
+  };
+
+  partMap.forEach((info, pk) => {
+    const recs = info.recs.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    const custPn = bomData?.masterList?.find(x => x.code === info.partCode)?.custPartNo || '';
+
+    // 품목 헤더행
+    ws.mergeCells(`A${ri}:I${ri}`);
+    const pr = ws.getRow(ri);
+    let partLabel = info.partName || pk;
+    if (info.partCode) partLabel += `  제품코드: ${info.partCode}`;
+    if (custPn)        partLabel += ` | 고객사P/N: ${custPn}`;
+    pr.getCell(1).value = partLabel;
+    pr.getCell(1).font = { bold:true, size:11, color:{ argb:'FF1A3C6E' } };
+    pr.getCell(1).fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF0F4FF' } };
+    pr.getCell(1).alignment = { horizontal:'left', vertical:'middle' };
+    pr.getCell(1).border = borderThin('FFB8C8E8');
+    pr.height = 20;
+    ri++;
+
+    // 헤더 1행: NO | 발생내역(B~E) | 조치결과(F~I)
+    ws.mergeCells(`A${ri}:A${ri+1}`);
+    ws.mergeCells(`B${ri}:E${ri}`);
+    ws.mergeCells(`F${ri}:I${ri}`);
+    const h1 = ws.getRow(ri);
+    setCell(h1, 1, 'NO',    { bold:true, bg:'FFF1F5F9', fontColor:'FF334155', borderColor:'FFB0BEC5' });
+    setCell(h1, 2, '발생내역', { bold:true, bg:'FF1A3C6E', fontColor:'FFFFFFFF', borderColor:'FF1A3C6E' });
+    setCell(h1, 6, '조치결과', { bold:true, bg:'FF2A5298', fontColor:'FFFFFFFF', borderColor:'FF2A5298' });
+    h1.height = 20;
+    ri++;
+
+    // 헤더 2행: 서브헤더
+    const h2 = ws.getRow(ri);
+    ['발생일','발생항목','발생부서','담당자','조치시점','조치방안','조치결과','품질검증'].forEach((lbl, i) => {
+      setCell(h2, i+2, lbl, { bold:true, bg:'FFF8FAFC', fontColor:'FF334155', borderColor:'FFB0BEC5' });
+    });
+    h2.height = 18;
+    ri++;
+
+    // 데이터행
+    recs.forEach((r, i) => {
+      const row = ws.getRow(ri);
+      const status = r.status || '-';
+      const statusColor = status==='완료'?'FF2E7D32': status==='진행중'?'FF1565C0': status==='지연'?'FFC62828':'FF64748B';
+      const qcColor = r.qualityCheck==='OK'?'FF10B981': r.qualityCheck==='NG'?'FFEF4444':'FF64748B';
+      const rowBg = i%2===0 ? 'FFFFFFFF' : 'FFF8FAFC';
+
+      setCell(row, 1, i+1,              { bg:rowBg, align:'center', fontSize:10 });
+      setCell(row, 2, r.date||'-',      { bg:rowBg, align:'center', fontSize:10 });
+      setCell(row, 3, r.before||'-',    { bg:rowBg, align:'left',   fontSize:10, wrap:true });
+      setCell(row, 4, r.dept||'-',      { bg:rowBg, align:'center', fontSize:10 });
+      setCell(row, 5, r.assignee||'-',  { bg:rowBg, align:'center', fontSize:10 });
+      setCell(row, 6, r.actionDate||'-',{ bg:rowBg, align:'center', fontSize:10 });
+      setCell(row, 7, r.after||'-',     { bg:rowBg, align:'left',   fontSize:10, wrap:true });
+
+      const sc = row.getCell(8);
+      sc.value = status;
+      sc.font = { bold:true, size:10, color:{ argb:statusColor } };
+      sc.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:rowBg } };
+      sc.alignment = { horizontal:'center', vertical:'middle' };
+      sc.border = borderThin('FFD0D9E8');
+
+      const qc = row.getCell(9);
+      qc.value = r.qualityCheck||'-';
+      qc.font = { bold:true, size:10, color:{ argb:qcColor } };
+      qc.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:rowBg } };
+      qc.alignment = { horizontal:'center', vertical:'middle' };
+      qc.border = borderThin('FFD0D9E8');
+
+      row.height = 18;
+      ri++;
+    });
+
+    ri++; // 부품 사이 빈 행
+  });
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:`변동점_${_mvSelectedModel}_${new Date().toISOString().slice(0,10)}.xlsx` });
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function mvTogglePart(pk) {
+  const id = 'mvPart_' + btoa(pk).replace(/[^a-zA-Z0-9]/g,'');
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function renderMvTable(recs) {
+  return `<div style="overflow-x:auto">
+  <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead>
+      <tr>
+        <th rowspan="2" style="padding:7px 10px;border:1px solid #e2e8f0;text-align:center;vertical-align:middle;background:#f1f5f9;color:#334155">NO</th>
+        <th colspan="4" style="padding:6px;border:1px solid #e2e8f0;text-align:center;background:#1a3c6e;color:#fff">발생내역</th>
+        <th colspan="4" style="padding:6px;border:1px solid #e2e8f0;text-align:center;background:#2a5298;color:#fff">조치결과</th>
+        <th rowspan="2" style="padding:7px 10px;border:1px solid #e2e8f0;text-align:center;vertical-align:middle;background:#f1f5f9;color:#334155">관리</th>
+      </tr>
+      <tr>
+        ${['발생일','발생항목','발생부서','담당자','조치시점','조치방안','조치결과','품질검증'].map(h=>`<th style="padding:6px 8px;border:1px solid #e2e8f0;background:#f8fafc;color:#334155;text-align:center;white-space:nowrap">${h}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>
+      ${recs.map((r,i) => {
+        const qcC = r.qualityCheck==='OK'?'#10b981':r.qualityCheck==='NG'?'#ef4444':'#64748b';
+        return `<tr style="border-bottom:1px solid #f0f4f8;cursor:pointer" onclick="openDetailModal('${r.id}')">
+          <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center">${i+1}</td>
+          <td style="padding:6px 8px;border:1px solid #e2e8f0;white-space:nowrap">${r.date||'-'}</td>
+          <td style="padding:6px 8px;border:1px solid #e2e8f0;max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(r.before)||'-'}</td>
+          <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center">${esc(r.dept)||'-'}</td>
+          <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center">${esc(r.assignee)||'-'}</td>
+          <td style="padding:6px 8px;border:1px solid #e2e8f0;white-space:nowrap;text-align:center">${r.actionDate||'-'}</td>
+          <td style="padding:6px 8px;border:1px solid #e2e8f0;max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(r.after)||'-'}</td>
+          <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center">${signalBadge(r.status)}</td>
+          <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center;color:${qcC};font-weight:700">${r.qualityCheck||'-'}</td>
+          <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center;white-space:nowrap">
+            <button class="btn-sm-edit" onclick="event.stopPropagation();openDetailModal('${r.id}')">상세</button>
+            <button class="btn-sm-edit" onclick="event.stopPropagation();openRegModal('${r.id}')" style="margin-left:2px">수정</button>
+            <button class="btn-sm-del" onclick="event.stopPropagation();askDelete('${r.id}')" style="margin-left:2px">삭제</button>
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+// ═══════════════════════════════════════
+//  고객사별 변동점 관리
+// ═══════════════════════════════════════
+let _cvSelectedCustomer = null;
+
+function renderCustomerView() {
+  const search = (document.getElementById('cvSearch')?.value || '').toLowerCase();
+
+  const customerSet = new Set();
+  records.forEach(r => { if (r.customer) customerSet.add(r.customer); });
+
+  const allCustomers = [...customerSet].sort();
+  const filtered = search ? allCustomers.filter(c => c.toLowerCase().includes(search)) : allCustomers;
+
+  const pendingMap = {};
+  records.forEach(r => {
+    const key = r.customer || '';
+    if (!key) return;
+    if (r.status !== '완료') pendingMap[key] = (pendingMap[key] || 0) + 1;
+  });
+
+  if (_cvSelectedCustomer && !filtered.includes(_cvSelectedCustomer)) _cvSelectedCustomer = null;
+  if (!_cvSelectedCustomer && filtered.length) _cvSelectedCustomer = filtered[0];
+
+  const listEl = document.getElementById('cvCustomerList');
+  if (listEl) {
+    listEl.innerHTML = filtered.map(c => {
+      const pending = pendingMap[c] || 0;
+      const isActive = c === _cvSelectedCustomer;
+      const badge = pending > 0
+        ? `<span style="font-size:10px;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-weight:700">미처리 ${pending}</span>`
+        : `<span style="font-size:10px;background:#dcfce7;color:#16a34a;border-radius:10px;padding:1px 6px;font-weight:600">양호</span>`;
+      return `<div onclick="cvSelectCustomer('${esc(c)}')" style="
+        display:flex;align-items:center;justify-content:space-between;
+        padding:9px 14px;cursor:pointer;font-size:13px;font-weight:600;
+        border-left:3px solid ${isActive ? '#1a3c6e' : 'transparent'};
+        background:${isActive ? '#1a3c6e' : 'transparent'};
+        color:${isActive ? '#fff' : '#374151'};
+        transition:all .15s
+      ">${esc(c)} ${badge}</div>`;
+    }).join('') || '<div style="padding:14px;color:#94a3b8;font-size:12px">고객사 없음</div>';
+  }
+
+  renderCvContent();
+}
+
+function cvSelectCustomer(customer) {
+  _cvSelectedCustomer = customer;
+  renderCustomerView();
+}
+
+function renderCvContent() {
+  const el = document.getElementById('cvContent');
+  if (!el) return;
+
+  if (!_cvSelectedCustomer) {
+    el.innerHTML = '<div style="color:#94a3b8;font-size:14px;padding:40px 0;text-align:center">← 왼쪽에서 고객사를 선택하세요</div>';
+    return;
+  }
+
+  const custRecs = records.filter(r => r.customer === _cvSelectedCustomer);
+
+  // 모델별 그룹핑
+  const modelMap = new Map();
+  custRecs.forEach(r => {
+    const mk = r.modelName || r.modelCode || '(품종 미지정)';
+    if (!modelMap.has(mk)) modelMap.set(mk, { modelName: r.modelName || '', modelCode: r.modelCode || '', recs: [] });
+    modelMap.get(mk).recs.push(r);
+  });
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:18px;font-weight:700;color:#1a3c6e">${esc(_cvSelectedCustomer)}</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="downloadCvExcel()" style="font-size:12px;padding:6px 14px;background:#fff;color:#217346;border-color:#217346">📥 Excel 다운로드</button>
+      <button class="btn btn-primary" onclick="openRegModal()" style="font-size:12px;padding:6px 14px">+ 변동점 등록</button>
+    </div>
+  </div>`;
+
+  if (modelMap.size === 0) {
+    html += '<div style="color:#94a3b8;text-align:center;padding:40px 0">이 고객사에 등록된 변동점이 없습니다.</div>';
+  } else {
+    modelMap.forEach((info, mk) => {
+      const recs = info.recs.sort((a,b) => b.date.localeCompare(a.date));
+      const latest = recs[0];
+      const pending = recs.filter(r => r.status !== '완료').length;
+      const statusColor = pending > 0 ? '#f59e0b' : '#10b981';
+      const statusText  = latest.status || '-';
+
+      html += `<div onclick="cvToggleModel('${esc(mk)}')" style="
+        background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+        padding:14px 18px;margin-bottom:10px;cursor:pointer;
+        transition:box-shadow .15s;
+      " onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:700;color:#1a3c6e;margin-bottom:4px">${esc(info.modelName || mk)}</div>
+            <div style="font-size:11px;color:#64748b">
+              ${latest.date ? `최근 발생: ${latest.date}` : ''}
+              ${latest.before ? ` | ${esc(latest.before.slice(0,40))}${latest.before.length>40?'…':''}` : ''}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <span style="font-size:12px;font-weight:600;color:${statusColor}">${statusText}</span>
+            <span style="background:${pending>0?'#fef3c7':'#dcfce7'};color:${pending>0?'#92400e':'#15803d'};
+              border-radius:12px;padding:2px 10px;font-size:12px;font-weight:700">${recs.length}건</span>
+            <span style="color:#94a3b8">›</span>
+          </div>
+        </div>
+        <div id="cvModel_${btoa(unescape(encodeURIComponent(mk))).replace(/[^a-zA-Z0-9]/g,'')}" style="display:none;margin-top:14px">
+          ${renderMvTable(recs)}
+        </div>
+      </div>`;
+    });
+  }
+
+  el.innerHTML = html;
+}
+
+async function downloadCvExcel() {
+  if (!_cvSelectedCustomer) return;
+  const custRecs = records.filter(r => r.customer === _cvSelectedCustomer);
+  if (custRecs.length === 0) { alert('다운로드할 데이터가 없습니다.'); return; }
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('변동점이력');
+
+  ws.columns = [
+    { width: 5 }, { width: 13 }, { width: 28 }, { width: 12 }, { width: 12 },
+    { width: 13 }, { width: 28 }, { width: 12 }, { width: 12 }
+  ];
+
+  const modelMap = new Map();
+  custRecs.forEach(r => {
+    const mk = r.modelName || r.modelCode || '(품종 미지정)';
+    if (!modelMap.has(mk)) modelMap.set(mk, { modelName: r.modelName || mk, modelCode: r.modelCode || '', recs: [] });
+    modelMap.get(mk).recs.push(r);
+  });
+
+  let ri = 1;
+
+  // 고객사명 타이틀
+  ws.mergeCells(`A${ri}:I${ri}`);
+  const tr = ws.getRow(ri);
+  tr.getCell(1).value = _cvSelectedCustomer;
+  tr.getCell(1).font = { bold: true, size: 14, color: { argb: 'FF0D2B5E' } };
+  tr.getCell(1).fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFEEF3FF' } };
+  tr.getCell(1).alignment = { horizontal:'left', vertical:'middle' };
+  tr.height = 26;
+  ri++;
+
+  const borderThin = (color='FFE2E8F0') => ({
+    top:{style:'thin',color:{argb:color}}, bottom:{style:'thin',color:{argb:color}},
+    left:{style:'thin',color:{argb:color}}, right:{style:'thin',color:{argb:color}}
+  });
+
+  const setCell = (row, col, value, opts = {}) => {
+    const c = row.getCell(col);
+    c.value = value;
+    if (opts.bold) c.font = { bold:true, size:opts.fontSize||11, color:{ argb:opts.fontColor||'FF000000' } };
+    else           c.font = { size:opts.fontSize||10, color:{ argb:opts.fontColor||'FF000000' } };
+    if (opts.bg)   c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:opts.bg } };
+    c.alignment = { horizontal:opts.align||'center', vertical:'middle', wrapText:!!opts.wrap };
+    c.border = borderThin(opts.borderColor||'FFD0D9E8');
+  };
+
+  modelMap.forEach((info, mk) => {
+    const recs = info.recs.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+    // 모델 헤더행
+    ws.mergeCells(`A${ri}:I${ri}`);
+    const mr = ws.getRow(ri);
+    mr.getCell(1).value = info.modelName || mk;
+    mr.getCell(1).font = { bold:true, size:11, color:{ argb:'FF1A3C6E' } };
+    mr.getCell(1).fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF0F4FF' } };
+    mr.getCell(1).alignment = { horizontal:'left', vertical:'middle' };
+    mr.getCell(1).border = borderThin('FFB8C8E8');
+    mr.height = 20;
+    ri++;
+
+    // 헤더 1행
+    ws.mergeCells(`A${ri}:A${ri+1}`);
+    ws.mergeCells(`B${ri}:E${ri}`);
+    ws.mergeCells(`F${ri}:I${ri}`);
+    const h1 = ws.getRow(ri);
+    setCell(h1, 1, 'NO',    { bold:true, bg:'FFF1F5F9', fontColor:'FF334155', borderColor:'FFB0BEC5' });
+    setCell(h1, 2, '발생내역', { bold:true, bg:'FF1A3C6E', fontColor:'FFFFFFFF', borderColor:'FF1A3C6E' });
+    setCell(h1, 6, '조치결과', { bold:true, bg:'FF2A5298', fontColor:'FFFFFFFF', borderColor:'FF2A5298' });
+    h1.height = 20;
+    ri++;
+
+    // 헤더 2행
+    const h2 = ws.getRow(ri);
+    ['발생일','발생항목','발생부서','담당자','조치시점','조치방안','조치결과','품질검증'].forEach((lbl, i) => {
+      setCell(h2, i+2, lbl, { bold:true, bg:'FFF8FAFC', fontColor:'FF334155', borderColor:'FFB0BEC5' });
+    });
+    h2.height = 18;
+    ri++;
+
+    // 데이터행
+    recs.forEach((r, i) => {
+      const row = ws.getRow(ri);
+      const status = r.status || '-';
+      const statusColor = status==='완료'?'FF2E7D32': status==='진행중'?'FF1565C0': status==='지연'?'FFC62828':'FF64748B';
+      const qcColor = r.qualityCheck==='OK'?'FF10B981': r.qualityCheck==='NG'?'FFEF4444':'FF64748B';
+      const rowBg = i%2===0 ? 'FFFFFFFF' : 'FFF8FAFC';
+
+      setCell(row, 1, i+1,              { bg:rowBg, align:'center', fontSize:10 });
+      setCell(row, 2, r.date||'-',      { bg:rowBg, align:'center', fontSize:10 });
+      setCell(row, 3, r.before||'-',    { bg:rowBg, align:'left',   fontSize:10, wrap:true });
+      setCell(row, 4, r.dept||'-',      { bg:rowBg, align:'center', fontSize:10 });
+      setCell(row, 5, r.assignee||'-',  { bg:rowBg, align:'center', fontSize:10 });
+      setCell(row, 6, r.actionDate||'-',{ bg:rowBg, align:'center', fontSize:10 });
+      setCell(row, 7, r.after||'-',     { bg:rowBg, align:'left',   fontSize:10, wrap:true });
+
+      const sc = row.getCell(8);
+      sc.value = status;
+      sc.font = { bold:true, size:10, color:{ argb:statusColor } };
+      sc.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:rowBg } };
+      sc.alignment = { horizontal:'center', vertical:'middle' };
+      sc.border = borderThin('FFD0D9E8');
+
+      const qc = row.getCell(9);
+      qc.value = r.qualityCheck||'-';
+      qc.font = { bold:true, size:10, color:{ argb:qcColor } };
+      qc.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:rowBg } };
+      qc.alignment = { horizontal:'center', vertical:'middle' };
+      qc.border = borderThin('FFD0D9E8');
+
+      row.height = 18;
+      ri++;
+    });
+
+    ri++; // 모델 사이 빈 행
+  });
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:`변동점_${_cvSelectedCustomer}_${new Date().toISOString().slice(0,10)}.xlsx` });
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function cvToggleModel(mk) {
+  const id = 'cvModel_' + btoa(unescape(encodeURIComponent(mk))).replace(/[^a-zA-Z0-9]/g,'');
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════
+//  신고/처리기준별 변동점 관리
+// ═══════════════════════════════════════
+const REPORT_STD_ORDER = ['4M Gate', '중요 4M', '단순 4M', '미신고(협력사 관리)'];
+let _rvSelectedLevel = null;
+
+function _rvGetLevel(r) {
+  if (r.reportStd) return r.reportStd;
+  if (r.changeItemNo) {
+    const item = CHANGE_ITEMS.find(it => it.no === r.changeItemNo);
+    if (item) return item.level;
+  }
+  return null;
+}
+
+function renderReportStdView() {
+  const search = (document.getElementById('rvSearch')?.value || '').toLowerCase();
+
+  const levelSet = new Set();
+  records.forEach(r => { const lv = _rvGetLevel(r); if (lv) levelSet.add(lv); });
+
+  const allLevels = REPORT_STD_ORDER.filter(lv => levelSet.has(lv));
+  const filtered  = search ? allLevels.filter(lv => lv.toLowerCase().includes(search)) : allLevels;
+
+  const pendingMap = {};
+  records.forEach(r => {
+    const key = _rvGetLevel(r);
+    if (!key) return;
+    if (r.status !== '완료') pendingMap[key] = (pendingMap[key] || 0) + 1;
+  });
+
+  if (_rvSelectedLevel && !filtered.includes(_rvSelectedLevel)) _rvSelectedLevel = null;
+  if (!_rvSelectedLevel && filtered.length) _rvSelectedLevel = filtered[0];
+
+  const listEl = document.getElementById('rvLevelList');
+  if (listEl) {
+    listEl.innerHTML = filtered.map(lv => {
+      const pending  = pendingMap[lv] || 0;
+      const isActive = lv === _rvSelectedLevel;
+      const badge    = pending > 0
+        ? `<span style="font-size:10px;background:#f59e0b;color:#fff;border-radius:10px;padding:1px 6px;font-weight:700">미처리 ${pending}</span>`
+        : `<span style="font-size:10px;background:#dcfce7;color:#16a34a;border-radius:10px;padding:1px 6px;font-weight:600">양호</span>`;
+      return `<div onclick="rvSelectLevel('${esc(lv)}')" style="
+        display:flex;align-items:center;justify-content:space-between;
+        padding:9px 14px;cursor:pointer;font-size:13px;font-weight:600;
+        border-left:3px solid ${isActive ? '#1a3c6e' : 'transparent'};
+        background:${isActive ? '#1a3c6e' : 'transparent'};
+        color:${isActive ? '#fff' : '#374151'};
+        transition:all .15s
+      ">${esc(lv)} ${badge}</div>`;
+    }).join('') || '<div style="padding:14px;color:#94a3b8;font-size:12px">항목 없음</div>';
+  }
+
+  renderRvContent();
+}
+
+function rvSelectLevel(lv) {
+  _rvSelectedLevel = lv;
+  renderReportStdView();
+}
+
+function renderRvContent() {
+  const el = document.getElementById('rvContent');
+  if (!el) return;
+
+  if (!_rvSelectedLevel) {
+    el.innerHTML = '<div style="color:#94a3b8;font-size:14px;padding:40px 0;text-align:center">← 왼쪽에서 신고/처리기준을 선택하세요</div>';
+    return;
+  }
+
+  const lvRecs = records.filter(r => _rvGetLevel(r) === _rvSelectedLevel);
+
+  // 모델별 그룹핑
+  const modelMap = new Map();
+  lvRecs.forEach(r => {
+    const mk = r.modelName || r.modelCode || '(품종 미지정)';
+    if (!modelMap.has(mk)) modelMap.set(mk, { modelName: r.modelName || '', modelCode: r.modelCode || '', recs: [] });
+    modelMap.get(mk).recs.push(r);
+  });
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:18px;font-weight:700;color:#1a3c6e">${esc(_rvSelectedLevel)}</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="downloadRvExcel()" style="font-size:12px;padding:6px 14px;background:#fff;color:#217346;border-color:#217346">📥 Excel 다운로드</button>
+      <button class="btn btn-primary" onclick="openRegModal()" style="font-size:12px;padding:6px 14px">+ 변동점 등록</button>
+    </div>
+  </div>`;
+
+  if (modelMap.size === 0) {
+    html += '<div style="color:#94a3b8;text-align:center;padding:40px 0">이 기준에 등록된 변동점이 없습니다.</div>';
+  } else {
+    modelMap.forEach((info, mk) => {
+      const recs   = info.recs.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+      const latest = recs[0];
+      const pending = recs.filter(r => r.status !== '완료').length;
+      const statusColor = pending > 0 ? '#f59e0b' : '#10b981';
+      const statusText  = latest.status || '-';
+      const safeId = 'rvModel_' + btoa(unescape(encodeURIComponent(mk))).replace(/[^a-zA-Z0-9]/g,'');
+
+      html += `<div onclick="rvToggleModel('${esc(mk)}')" style="
+        background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+        padding:14px 18px;margin-bottom:10px;cursor:pointer;
+        transition:box-shadow .15s;
+      " onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:700;color:#1a3c6e;margin-bottom:4px">${esc(info.modelName || mk)}</div>
+            <div style="font-size:11px;color:#64748b">
+              ${latest.date ? `최근 발생: ${latest.date}` : ''}
+              ${latest.before ? ` | ${esc(latest.before.slice(0,40))}${latest.before.length>40?'…':''}` : ''}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <span style="font-size:12px;font-weight:600;color:${statusColor}">${statusText}</span>
+            <span style="background:${pending>0?'#fef3c7':'#dcfce7'};color:${pending>0?'#92400e':'#15803d'};
+              border-radius:12px;padding:2px 10px;font-size:12px;font-weight:700">${recs.length}건</span>
+            <span style="color:#94a3b8">›</span>
+          </div>
+        </div>
+        <div id="${safeId}" style="display:none;margin-top:14px">
+          ${renderMvTable(recs)}
+        </div>
+      </div>`;
+    });
+  }
+
+  el.innerHTML = html;
+}
+
+function rvToggleModel(mk) {
+  const id = 'rvModel_' + btoa(unescape(encodeURIComponent(mk))).replace(/[^a-zA-Z0-9]/g,'');
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function downloadRvExcel() {
+  if (!_rvSelectedLevel) return;
+  const lvRecs = records.filter(r => _rvGetLevel(r) === _rvSelectedLevel);
+  if (lvRecs.length === 0) { alert('다운로드할 데이터가 없습니다.'); return; }
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('변동점이력');
+  ws.columns = [
+    { width: 5 }, { width: 13 }, { width: 28 }, { width: 12 }, { width: 12 },
+    { width: 13 }, { width: 28 }, { width: 12 }, { width: 12 }
+  ];
+
+  const modelMap = new Map();
+  lvRecs.forEach(r => {
+    const mk = r.modelName || r.modelCode || '(품종 미지정)';
+    if (!modelMap.has(mk)) modelMap.set(mk, { modelName: r.modelName || mk, recs: [] });
+    modelMap.get(mk).recs.push(r);
+  });
+
+  let ri = 1;
+  ws.mergeCells(`A${ri}:I${ri}`);
+  const tr = ws.getRow(ri);
+  tr.getCell(1).value = _rvSelectedLevel;
+  tr.getCell(1).font  = { bold:true, size:14, color:{ argb:'FF0D2B5E' } };
+  tr.getCell(1).fill  = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFEEF3FF' } };
+  tr.getCell(1).alignment = { horizontal:'left', vertical:'middle' };
+  tr.height = 26; ri++;
+
+  const borderThin = (c='FFD0D9E8') => ({ top:{style:'thin',color:{argb:c}}, bottom:{style:'thin',color:{argb:c}}, left:{style:'thin',color:{argb:c}}, right:{style:'thin',color:{argb:c}} });
+  const setCell = (row, col, value, opts={}) => {
+    const c = row.getCell(col);
+    c.value = value;
+    c.font  = opts.bold ? { bold:true, size:opts.fontSize||11, color:{ argb:opts.fontColor||'FF000000' } } : { size:opts.fontSize||10, color:{ argb:opts.fontColor||'FF000000' } };
+    if (opts.bg) c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:opts.bg } };
+    c.alignment = { horizontal:opts.align||'center', vertical:'middle', wrapText:!!opts.wrap };
+    c.border = borderThin(opts.borderColor||'FFD0D9E8');
+  };
+
+  modelMap.forEach((info, mk) => {
+    const recs = info.recs.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    ws.mergeCells(`A${ri}:I${ri}`);
+    const mr = ws.getRow(ri);
+    mr.getCell(1).value = info.modelName || mk;
+    mr.getCell(1).font  = { bold:true, size:11, color:{ argb:'FF1A3C6E' } };
+    mr.getCell(1).fill  = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF0F4FF' } };
+    mr.getCell(1).alignment = { horizontal:'left', vertical:'middle' };
+    mr.getCell(1).border = borderThin('FFB8C8E8');
+    mr.height = 20; ri++;
+
+    ws.mergeCells(`A${ri}:A${ri+1}`); ws.mergeCells(`B${ri}:E${ri}`); ws.mergeCells(`F${ri}:I${ri}`);
+    const h1 = ws.getRow(ri);
+    setCell(h1,1,'NO',     { bold:true, bg:'FFF1F5F9', fontColor:'FF334155', borderColor:'FFB0BEC5' });
+    setCell(h1,2,'발생내역', { bold:true, bg:'FF1A3C6E', fontColor:'FFFFFFFF', borderColor:'FF1A3C6E' });
+    setCell(h1,6,'조치결과', { bold:true, bg:'FF2A5298', fontColor:'FFFFFFFF', borderColor:'FF2A5298' });
+    h1.height = 20; ri++;
+
+    const h2 = ws.getRow(ri);
+    ['발생일','발생항목','발생부서','담당자','조치시점','조치방안','조치결과','품질검증'].forEach((lbl,i) => {
+      setCell(h2, i+2, lbl, { bold:true, bg:'FFF8FAFC', fontColor:'FF334155', borderColor:'FFB0BEC5' });
+    });
+    h2.height = 18; ri++;
+
+    recs.forEach((r,i) => {
+      const row = ws.getRow(ri);
+      const status = r.status || '-';
+      const sC = status==='완료'?'FF2E7D32':status==='진행중'?'FF1565C0':status==='지연'?'FFC62828':'FF64748B';
+      const qC = r.qualityCheck==='OK'?'FF10B981':r.qualityCheck==='NG'?'FFEF4444':'FF64748B';
+      const bg = i%2===0?'FFFFFFFF':'FFF8FAFC';
+      setCell(row,1,i+1,              {bg,align:'center',fontSize:10});
+      setCell(row,2,r.date||'-',      {bg,align:'center',fontSize:10});
+      setCell(row,3,r.before||'-',    {bg,align:'left',  fontSize:10,wrap:true});
+      setCell(row,4,r.dept||'-',      {bg,align:'center',fontSize:10});
+      setCell(row,5,r.assignee||'-',  {bg,align:'center',fontSize:10});
+      setCell(row,6,r.actionDate||'-',{bg,align:'center',fontSize:10});
+      setCell(row,7,r.after||'-',     {bg,align:'left',  fontSize:10,wrap:true});
+      const sc = row.getCell(8); sc.value=status; sc.font={bold:true,size:10,color:{argb:sC}}; sc.fill={type:'pattern',pattern:'solid',fgColor:{argb:bg}}; sc.alignment={horizontal:'center',vertical:'middle'}; sc.border=borderThin();
+      const qc = row.getCell(9); qc.value=r.qualityCheck||'-'; qc.font={bold:true,size:10,color:{argb:qC}}; qc.fill={type:'pattern',pattern:'solid',fgColor:{argb:bg}}; qc.alignment={horizontal:'center',vertical:'middle'}; qc.border=borderThin();
+      row.height=18; ri++;
+    });
+    ri++;
+  });
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:`변동점_${_rvSelectedLevel}_${new Date().toISOString().slice(0,10)}.xlsx` });
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function clearFilters() {
+  ['filterDept','filter4m','filterModel','filterStatus','filterFrom','filterTo'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  renderHistory();
+}
+
+// ═══════════════════════════════════════
+//  DETAIL MODAL
+// ═══════════════════════════════════════
+let currentDetailId = null;
+function openDetailModal(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  currentDetailId = id;
+
+  const detailLevel = _rvGetLevel(r) || '-';
+  const detailItemName = r.changeItemNo ? (CHANGE_ITEMS.find(it => it.no === r.changeItemNo)?.name || '-') : '-';
+
+  document.getElementById('detailModalBody').innerHTML = `
+    <div class="detail-info-grid">
+      <div class="detail-field"><label>등록일</label><div class="val">${r.date}</div></div>
+      <div class="detail-field"><label>4M 유형</label><div class="val">${badge4m(r.type4m)}</div></div>
+      <div class="detail-field"><label>처리 상태</label><div class="val">${signalBadge(r.status)}</div></div>
+      <div class="detail-field"><label>신고/처리기준</label><div class="val" style="font-weight:700;color:#0d2b5e">${esc(detailLevel)}</div></div>
+      <div class="detail-field"><label>변경 항목</label><div class="val">${esc(detailItemName)}</div></div>
+      <div class="detail-field"><label>조치시점</label><div class="val">${r.actionDate||'-'}</div></div>
+      <div class="detail-field"><label>부서명</label><div class="val">${r.dept||'-'}</div></div>
+      <div class="detail-field"><label>담당자</label><div class="val">${r.assignee||'-'}</div></div>
+      <div class="detail-field"><label>품질검증</label><div class="val">${r.qualityCheck||'-'}</div></div>
+      <div class="detail-field"><label>모델명</label><div class="val">${r.modelName||'-'}</div></div>
+      <div class="detail-field"><label>부품코드</label><div class="val">${r.partCode||'-'}</div></div>
+      <div class="detail-field"><label>고객사 P/N</label><div class="val">${r.custPartNo||'-'}</div></div>
+      <div class="detail-field"><label>고객사</label><div class="val">${r.customer||'-'}</div></div>
+      <div class="detail-field" style="grid-column:1/-1"><label>부품명</label><div class="val">${r.partName||'-'}</div></div>
+    </div>
+    ${r.changeDesc ? `
+    <div class="section-title">📌 변경내용 (기준)</div>
+    <div class="detail-txt-box" style="margin-bottom:14px;background:#f0f7ff;border-color:#bcd4f5;color:#1e3a5f">${esc(r.changeDesc)}</div>` : ''}
+    <div class="section-title">📋 변경 내용</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#e65100;margin-bottom:5px">▶ 변경전</div>
+        <div class="detail-txt-box">${esc(r.before)}</div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#2e7d32;margin-bottom:5px">▶ 변경후</div>
+        <div class="detail-txt-box">${esc(r.after)}</div>
+      </div>
+    </div>
+    ${r.note ? `<div class="section-title">📝 비고</div><div class="detail-txt-box" style="margin-bottom:14px">${esc(r.note)}</div>` : ''}
+    <div id="detailAttachSection"></div>
+    ${detailPhotoHtml(r)}
+  `;
+  document.getElementById('detailModal').classList.add('open');
+  loadAttachmentsFromIDB(r.id, files => {
+    const sec = document.getElementById('detailAttachSection');
+    if (!sec || !files.length) return;
+    sec.innerHTML = `
+      <div class="section-title">📎 첨부파일</div>
+      <div class="attach-list" style="margin-bottom:14px">
+        ${files.map(f => `
+          <div class="attach-item">
+            <span style="font-size:15px">${fileIcon(f.type)}</span>
+            <a href="${f.data}" download="${esc(f.name)}" class="att-name" style="text-decoration:none;color:#1e5799;font-weight:700">${esc(f.name)}</a>
+            <span class="att-size">${formatFileSize(f.size)}</span>
+          </div>
+        `).join('')}
+      </div>`;
+  });
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('open');
+}
+
+// ═══════════════════════════════════════
+//  DELETE
+// ═══════════════════════════════════════
+function askDelete(id) {
+  deleteId = id;
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+
+function closeConfirm() {
+  deleteId = null;
+  document.getElementById('confirmOverlay').classList.remove('open');
+}
+
+function confirmDelete() {
+  if (!deleteId) return;
+  deleteAttachmentsFromIDB(deleteId);
+  sbDelete(deleteId);
+  records = records.filter(r => r.id !== deleteId);
+  closeConfirm();
+  renderAll();
+  showToast('🗑️ 변동점 이력이 삭제되었습니다');
+}
+
+// ═══════════════════════════════════════
+//  PHOTO VIEWER
+// ═══════════════════════════════════════
+function openPhotoViewerArr(photos, idx) {
+  if (!photos || !photos.length) return;
+  _pvPhotos = photos;
+  _pvIdx    = Math.max(0, Math.min(idx, photos.length - 1));
+  _pvUpdate();
+  document.getElementById('photoViewer').classList.add('open');
+}
+
+function _pvUpdate() {
+  document.getElementById('photoViewerImg').src = _pvPhotos[_pvIdx];
+  const counter = document.getElementById('pvCounter');
+  const prev    = document.getElementById('pvPrev');
+  const next    = document.getElementById('pvNext');
+  counter.textContent = _pvPhotos.length > 1 ? `${_pvIdx + 1} / ${_pvPhotos.length}` : '';
+  const show = _pvPhotos.length > 1;
+  prev.style.display = next.style.display = show ? '' : 'none';
+}
+
+function pvNav(dir) {
+  if (!_pvPhotos.length) return;
+  _pvIdx = (_pvIdx + dir + _pvPhotos.length) % _pvPhotos.length;
+  _pvUpdate();
+}
+
+function closePhotoViewer() {
+  document.getElementById('photoViewer').classList.remove('open');
+  _pvPhotos = []; _pvIdx = 0;
+}
+
+// ── PHOTO HELPER ──
+function photoThumb(r, type) {
+  const arr = Array.isArray(r[`photos${type==='before'?'Before':'After'}`])
+    ? r[`photos${type==='before'?'Before':'After'}`]
+    : (r[`photo${type==='before'?'Before':'After'}`] ? [r[`photo${type==='before'?'Before':'After'}`]] : []);
+  if (!arr.length) return '<span class="no-photo">-</span>';
+  const arrJson = esc(JSON.stringify(arr));
+  return `<div style="position:relative;display:inline-block">
+    <img class="photo-thumb" src="${arr[0]}" onclick="openPhotoViewerArr(${arrJson},0)">
+    ${arr.length > 1 ? `<span style="position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;padding:1px 4px;border-radius:4px">+${arr.length}</span>` : ''}
+  </div>`;
+}
+
+function detailPhotoHtml(r) {
+  const pbArr = Array.isArray(r.photosBefore) ? r.photosBefore : (r.photoBefore ? [r.photoBefore] : []);
+  const paArr = Array.isArray(r.photosAfter)  ? r.photosAfter  : (r.photoAfter  ? [r.photoAfter]  : []);
+  if (!pbArr.length && !paArr.length) return '';
+  const grid = (arr, color) => arr.length
+    ? arr.map((src,i) => `<img src="${src}" style="width:100%;max-height:200px;object-fit:contain;border-radius:6px;border:1px solid #ddd;cursor:zoom-in;margin-bottom:6px"
+        onclick="openPhotoViewerArr(${JSON.stringify(arr)},${i})">`).join('')
+    : '<div style="color:#bbb;font-size:12px;padding:20px;text-align:center">사진 없음</div>';
+  return `<div class="section-title">📷 사진</div>
+    <div class="detail-photo-grid">
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#e65100;margin-bottom:5px">변경전 (${pbArr.length}장)</div>
+        ${grid(pbArr,'#e65100')}
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#2e7d32;margin-bottom:5px">변경후 (${paArr.length}장)</div>
+        ${grid(paArr,'#2e7d32')}
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════
+//  EXPORT CSV
+// ═══════════════════════════════════════
+function exportCSV() {
+  const headers = ['No','등록일','4M유형','모델코드','모델명','부품코드','부품명','변경전내용','변경후내용','상태','비고'];
+  const rows = records.map((r,i) => [
+    i+1, r.date, r.type4m, r.modelCode||'', r.modelName||'',
+    r.partCode||'', r.partName||'', `"${(r.before||'').replace(/"/g,'""')}"`,
+    `"${(r.after||'').replace(/"/g,'""')}"`, r.status, r.note||''
+  ]);
+  const csv = '\uFEFF' + [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `4M변동점이력_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ═══════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════
+function badge4m(type) {
+  const map = {Man:'badge-man',Machine:'badge-machine',Material:'badge-material',Method:'badge-method'};
+  return `<span class="${map[type]||'badge-man'}">${type||'-'}</span>`;
+}
+
+function signalBadge(status) {
+  const map = {
+    '대기':'signal-wait','진행중':'signal-prog','완료':'signal-done','지연':'signal-delay'
+  };
+  const cls = map[status] || 'signal-wait';
+  return `<span class="signal ${cls}"><span class="signal-dot"></span>${status||'대기'}</span>`;
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let toastTimer;
+function showToast(msg, ms) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), ms || 3000);
+}
+
+// ═══════════════════════════════════════
+//  PHOTO HOVER MAGNIFIER
+// ═══════════════════════════════════════
+const _hoverPreview = (() => {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = [
+    'display:none','position:fixed','z-index:9000','pointer-events:none',
+    'border-radius:10px','box-shadow:0 8px 36px rgba(0,0,0,.55)',
+    'border:3px solid #fff','background:#111','transition:opacity .15s'
+  ].join(';');
+  const img = document.createElement('img');
+  img.style.cssText = 'max-width:340px;max-height:340px;object-fit:contain;border-radius:8px;display:block';
+  overlay.appendChild(img);
+  document.body.appendChild(overlay);
+
+  let hideTimer, visible = false;
+
+  function show(src, e) {
+    clearTimeout(hideTimer);
+    img.src = src;
+    overlay.style.display = 'block';
+    overlay.style.opacity = '0';
+    requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+    visible = true;
+    move(e);
+  }
+
+  function move(e) {
+    if (!visible) return;
+    const pw = 346, ph = 346;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let x = e.clientX + 18;
+    let y = e.clientY - Math.round(ph / 2);
+    if (x + pw > vw - 8) x = e.clientX - pw - 18;
+    if (y < 8) y = 8;
+    if (y + ph > vh - 8) y = vh - ph - 8;
+    overlay.style.left = x + 'px';
+    overlay.style.top  = y + 'px';
+  }
+
+  function hide() {
+    hideTimer = setTimeout(() => {
+      overlay.style.opacity = '0';
+      setTimeout(() => { overlay.style.display = 'none'; img.src = ''; visible = false; }, 150);
+    }, 80);
+  }
+
+  return { show, move, hide };
+})();
+
+document.addEventListener('mouseover', e => {
+  const el = e.target;
+  if (el.matches('.photo-thumb, .multi-thumb img')) _hoverPreview.show(el.src, e);
+});
+document.addEventListener('mousemove', e => {
+  if (e.target.matches('.photo-thumb, .multi-thumb img')) _hoverPreview.move(e);
+});
+document.addEventListener('mouseout', e => {
+  if (e.target.matches('.photo-thumb, .multi-thumb img')) _hoverPreview.hide();
+});
+
+// Close modals on overlay click
+document.getElementById('regModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeRegModal();
+});
+document.getElementById('detailModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeDetailModal();
+});
+document.getElementById('confirmOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeConfirm();
+});
+
+// ESC key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeRegModal(); closeDetailModal(); closeConfirm(); closePhotoViewer();
+  }
+});
+</script>
+</body>
+</html>
