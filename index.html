@@ -1541,7 +1541,39 @@ async function sbLoad() {
   const { data, error } = await _sb.from('records').select('*').order('date', { ascending: false });
   showDbLoading(false);
   if (error) { console.error('Supabase load error:', error); showToast('⚠️ 데이터 로드 실패'); return; }
+
+  // Supabase가 비어있고 localStorage에 데이터가 있으면 자동 마이그레이션
+  if ((!data || data.length === 0)) {
+    const local = JSON.parse(localStorage.getItem('4m_records') || '[]');
+    if (local.length > 0) {
+      await sbMigrateFromLocal(local);
+      return;
+    }
+  }
+
   records = (data || []).map(dbToRec);
+}
+
+async function sbMigrateFromLocal(localRecords) {
+  showDbLoading(true);
+  showToast('📤 기존 데이터를 서버로 업로드 중...');
+  const chunks = [];
+  for (let i = 0; i < localRecords.length; i += 50) chunks.push(localRecords.slice(i, i + 50));
+  let failed = false;
+  for (const chunk of chunks) {
+    const { error } = await _sb.from('records').upsert(chunk.map(recToDb));
+    if (error) { console.error('Migration error:', error); failed = true; break; }
+  }
+  showDbLoading(false);
+  if (failed) {
+    showToast('⚠️ 마이그레이션 실패 - 로컬 데이터 사용');
+    records = localRecords;
+  } else {
+    records = localRecords;
+    localStorage.removeItem('4m_records');
+    showToast(`✅ ${localRecords.length}건 서버 업로드 완료!`);
+  }
+  renderAll();
 }
 
 async function sbUpsert(rec) {
