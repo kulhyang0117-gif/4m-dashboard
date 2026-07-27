@@ -105,6 +105,60 @@ tfoot td{background:#0d2b5e;color:#fff;padding:8px 10px;font-size:12px;font-weig
 .photo-thumb:hover{transform:scale(1.08);box-shadow:0 4px 12px rgba(0,0,0,.2)}
 .no-photo{color:#bbb;font-size:11px}
 
+/* ── GUIDE ── */
+.guide-card{border:1px solid #dde4ef;border-radius:10px;overflow:hidden;background:#fff}
+.guide-card-header{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;background:#f4f7fb;font-size:13px;font-weight:700;color:#0d2b5e;user-select:none;transition:background .15s}
+.guide-card-header:hover{background:#e8eef8}
+.guide-card-body{display:none;padding:16px 18px;font-size:13px;color:#334155;line-height:1.7;border-top:1px solid #dde4ef}
+.guide-card-body.open{display:block}
+.guide-card-body ol,.guide-card-body ul{padding-left:20px;margin:8px 0}
+.guide-card-body li{margin-bottom:4px}
+.guide-card-body p{margin-bottom:10px}
+.guide-arrow{font-size:12px;transition:transform .2s;color:#64748b}
+.guide-arrow.open{transform:rotate(180deg)}
+.guide-tip{background:#eef5ff;border-left:4px solid #1e5799;border-radius:4px;padding:8px 12px;margin-top:12px;font-size:12px;color:#1a3c6e}
+.guide-btn-sample{background:#0d2b5e;color:#fff;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:700}
+.guide-step-list{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.guide-step{display:flex;gap:10px;align-items:flex-start}
+.guide-step-num{background:#1a3c6e;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+.guide-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+.guide-table th{background:#1a3c6e;color:#fff;padding:7px 10px;text-align:left;font-weight:700}
+.guide-table td{padding:6px 10px;border-bottom:1px solid #eef1f7;vertical-align:top}
+.guide-table tr:last-child td{border-bottom:none}
+.guide-table tr:nth-child(even) td{background:#f8fafc}
+.req-cell{color:#c62828;font-weight:700;text-align:center}
+.guide-feature-list{display:flex;flex-direction:column;gap:12px}
+.guide-feature{background:#f8fafc;border-radius:8px;padding:12px 14px}
+.guide-feature-title{font-weight:700;color:#0d2b5e;margin-bottom:4px;font-size:13px}
+.guide-faq{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #f0f4f8}
+.guide-faq:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.guide-faq-q{font-weight:700;color:#0d2b5e;margin-bottom:4px}
+.guide-faq-a{color:#475569;font-size:12px;line-height:1.6}
+kbd{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:3px;padding:1px 5px;font-size:11px;font-family:monospace}
+/* ── VERIFY TABLE ── */
+.verify-tbl-container{position:relative;margin-top:10px}
+.verify-tbl-remove{position:absolute;top:-9px;right:-9px;z-index:10;background:#c62828;color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center}
+.verify-tbl-wrap{overflow-x:auto;border:1px solid #b8c8e8;border-radius:4px;-webkit-user-select:none;user-select:none}
+.verify-tbl{border-collapse:collapse;table-layout:fixed;min-width:100%}
+.verify-tbl th{background:#1a3c6e;color:#fff;font-size:12px;font-weight:700;padding:6px 8px;position:relative;border:1px solid #0d2b5e;white-space:nowrap;min-width:60px;outline:none}
+.verify-tbl th[contenteditable=true]:focus{background:#2a5298;outline:none}
+.verify-tbl td{border:1px solid #c7d6ea;padding:6px 8px;font-size:12px;min-height:26px;outline:none;vertical-align:top;word-break:break-word}
+.verify-tbl tbody tr:nth-child(odd)  td{background:#fff}
+.verify-tbl tbody tr:nth-child(even) td{background:#dbeafe}
+.verify-tbl td:focus{background:#fffde7 !important;outline:1px solid #1a3c6e}
+.col-resize-handle{position:absolute;right:0;top:0;width:6px;height:100%;cursor:col-resize;z-index:2;background:transparent}
+.col-resize-handle:hover,.col-resize-handle.dragging{background:rgba(255,255,255,.4)}
+.verify-tbl.no-color tbody tr td{background:#fff !important}
+.verify-tbl-toolbar{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
+.verify-tbl-toolbar button{font-size:11px;padding:3px 9px;border:1px solid #cdd5e0;border-radius:4px;cursor:pointer;background:#fff;color:#334155;transition:all .15s}
+.verify-tbl-toolbar button.active{background:#1a3c6e;color:#fff;border-color:#1a3c6e}
+/* context menu */
+#verifyCtxMenu{display:none;position:fixed;z-index:9999;background:#fff;border:1px solid #cdd5e0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18);padding:4px 0;min-width:160px}
+.ctx-item{padding:8px 16px;font-size:13px;cursor:pointer;color:#334155;display:flex;align-items:center;gap:8px}
+.ctx-item:hover{background:#f0f5ff;color:#1a3c6e}
+.ctx-divider{border-top:1px solid #f0f4f8;margin:3px 0}
+.ctx-item.danger{color:#c62828}
+.ctx-item.danger:hover{background:#fff5f5}
 /* ── VERIFICATION SECTION ── */
 .verify-dropdown{position:absolute;top:100%;left:0;z-index:700;background:#fff;border:1px solid #cdd5e0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);padding:6px 0;min-width:180px;margin-top:2px}
 .verify-dropdown label{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;font-size:13px;user-select:none}
@@ -411,6 +465,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
     <button class="m-nav-item2" id="mnav-customer"   onclick="showTab('customer');closeDrawer()"><span class="mni">🏢</span>고객사별</button>
     <button class="m-nav-item2" id="mnav-reportstd" onclick="showTab('reportstd');closeDrawer()"><span class="mni">📑</span>신고기준별</button>
     <button class="m-nav-item2" id="mnav-upload"    onclick="showTab('upload');closeDrawer()"><span class="mni">📂</span>업로드</button>
+    <button class="m-nav-item2" id="mnav-guide"    onclick="showTab('guide');closeDrawer()"><span class="mni">📖</span>가이드</button>
   </div>
 </nav>
 
@@ -439,6 +494,9 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
     </button>
     <button class="nav-btn" onclick="showTab('upload')" id="nav-upload">
       <span class="nav-icon">📂</span><span class="nav-txt">파일 업로드</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('guide')" id="nav-guide">
+      <span class="nav-icon">📖</span><span class="nav-txt">이용 가이드</span>
     </button>
     <button class="sidebar-toggle" onclick="toggleSidebar()">◀</button>
   </div>
@@ -1057,6 +1115,121 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
       </div>
     </div>
 
+    <!-- ═══ TAB: 이용 가이드 ═══ -->
+    <div class="tab-panel" id="tab-guide">
+      <div class="toolbar"><div class="toolbar-title">이용 가이드</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+
+        <!-- 1. 시작하기 -->
+        <div class="guide-card">
+          <div class="guide-card-header" onclick="toggleGuide(this)">
+            <span>🚀 &nbsp;시작하기 — BOM 파일 업로드</span><span class="guide-arrow">▾</span>
+          </div>
+          <div class="guide-card-body">
+            <p>시스템을 처음 사용하기 전에 <strong>BOM(자재명세서) 파일</strong>을 업로드해야 품종과 부품 정보가 자동으로 연동됩니다.</p>
+            <ol>
+              <li>상단 카드에서 <strong>BOM 파일</strong>을 클릭하거나 파일을 드래그 앤 드롭합니다.</li>
+              <li>지원 형식: <strong>.xlsx / .xls</strong> (Excel)</li>
+              <li>업로드 완료 시 헤더에 <span style="color:#2e7d32;font-weight:700">BOM 로드됨</span> 표시가 나타납니다.</li>
+              <li>BOM은 서버에 저장되어 <strong>모든 기기에서 자동 동기화</strong>됩니다.</li>
+              <li>BOM 교체 시 <strong>🔄 파일 재업로드</strong> 버튼을 사용하세요.</li>
+            </ol>
+            <div class="guide-tip">💡 BOM 필수 컬럼: <strong>품종명(familyName), 부품코드(code), 부품명(productName)</strong></div>
+          </div>
+        </div>
+
+        <!-- 2. 변동점 등록 -->
+        <div class="guide-card">
+          <div class="guide-card-header" onclick="toggleGuide(this)">
+            <span>✏️ &nbsp;변동점 등록 방법</span><span class="guide-arrow">▾</span>
+          </div>
+          <div class="guide-card-body">
+            <p><strong>이력</strong> 또는 <strong>종합현황</strong> 탭의 <span class="guide-btn-sample">+ 변동점 등록</span> 버튼을 클릭합니다.</p>
+            <div class="guide-step-list">
+              <div class="guide-step"><span class="guide-step-num">1</span><div><strong>등록일</strong> — 변동이 발생한 날짜 선택</div></div>
+              <div class="guide-step"><span class="guide-step-num">2</span><div><strong>4M 유형</strong> — Man·Machine·Material·Method 중 선택 시 변경 항목 목록 자동 표시</div></div>
+              <div class="guide-step"><span class="guide-step-num">3</span><div><strong>변경 항목</strong> — 세부 항목 선택 시 신고/처리기준·변경내용 자동 입력 (수정 가능)</div></div>
+              <div class="guide-step"><span class="guide-step-num">4</span><div><strong>품종 선택</strong> — 검색창 입력 후 자동완성 선택 → 품목유형 → 품목명 순서로 선택하면 코드·고객사 자동 입력</div></div>
+              <div class="guide-step"><span class="guide-step-num">5</span><div><strong>변경전/변경후 내용</strong> — 변경 전·후 상태를 구체적으로 기술</div></div>
+              <div class="guide-step"><span class="guide-step-num">6</span><div><strong>부서명·담당자·조치시점·적용시점·조치결과·품질검증</strong> 입력</div></div>
+              <div class="guide-step"><span class="guide-step-num">7</span><div><strong>검증내용</strong> — 검증 유형 복수 선택 후 항목별 내용·표·사진 첨부</div></div>
+              <div class="guide-step"><span class="guide-step-num">8</span><div><strong>사진 등록</strong> — 클릭 업로드 또는 영역 활성화 후 <kbd>Ctrl+V</kbd> 붙여넣기</div></div>
+              <div class="guide-step"><span class="guide-step-num">9</span><div><strong>저장</strong> — 서버에 즉시 저장, 모든 기기에서 확인 가능</div></div>
+            </div>
+            <div class="guide-tip">💡 등록 화면은 <strong>✕ 버튼 또는 취소</strong>로만 닫힙니다. 화면 바깥 클릭 시 입력 내용이 유지됩니다.</div>
+          </div>
+        </div>
+
+        <!-- 3. 항목 설명 -->
+        <div class="guide-card">
+          <div class="guide-card-header" onclick="toggleGuide(this)">
+            <span>📋 &nbsp;등록 항목 상세 설명</span><span class="guide-arrow">▾</span>
+          </div>
+          <div class="guide-card-body">
+            <table class="guide-table">
+              <thead><tr><th>항목</th><th>필수</th><th>설명</th></tr></thead>
+              <tbody>
+                <tr><td>등록일</td><td class="req-cell">●</td><td>변동점이 발생하거나 등록하는 날짜</td></tr>
+                <tr><td>4M 유형</td><td class="req-cell">●</td><td>Man(인원), Machine(설비), Material(자재), Method(공정·방법) 중 선택</td></tr>
+                <tr><td>변경 항목</td><td></td><td>4M 유형 선택 후 세부 변경 항목 선택. 신고기준·변경내용 자동 입력</td></tr>
+                <tr><td>신고/처리기준</td><td></td><td>변경 항목에 따라 자동 입력 (수정 가능)</td></tr>
+                <tr><td>변경내용</td><td></td><td>항목 선택 시 자동 입력. 구체적 내용으로 수정 가능</td></tr>
+                <tr><td>품종 선택</td><td class="req-cell">●</td><td>BOM 등록 품종 검색·선택. BOM 미업로드 시 직접 입력 가능</td></tr>
+                <tr><td>품목유형</td><td></td><td>조립·사출·도장·구매 등 부품 유형 분류</td></tr>
+                <tr><td>품목명 선택</td><td></td><td>품종·품목유형 선택 후 연동 부품 목록에서 선택</td></tr>
+                <tr><td>품목코드</td><td></td><td>품목 선택 시 BOM 기반 자동 입력</td></tr>
+                <tr><td>고객사 P/N</td><td></td><td>고객사 부품번호. 품목 선택 시 자동 입력</td></tr>
+                <tr><td>고객사</td><td></td><td>품목 선택 시 자동 입력</td></tr>
+                <tr><td>변경전 내용</td><td class="req-cell">●</td><td>변경 이전 상태를 구체적으로 기술</td></tr>
+                <tr><td>변경후 내용</td><td class="req-cell">●</td><td>변경 이후 상태를 구체적으로 기술</td></tr>
+                <tr><td>첨부파일</td><td></td><td>관련 문서·규격서 등 파일 첨부 (복수 가능)</td></tr>
+                <tr><td>부서명</td><td class="req-cell">●</td><td>변동점을 등록하는 담당 부서</td></tr>
+                <tr><td>담당자</td><td></td><td>해당 변동점의 담당자 이름</td></tr>
+                <tr><td>조치시점</td><td></td><td>조치가 완료되었거나 예정된 날짜</td></tr>
+                <tr><td>적용시점</td><td></td><td>변경 사항이 실제 생산에 적용되는 날짜</td></tr>
+                <tr><td>조치결과</td><td></td><td>대기 / 진행중 / 완료 / 지연 중 선택</td></tr>
+                <tr><td>품질검증</td><td></td><td>품질 검증 결과: OK / NG / 진행중 / 해당없음</td></tr>
+                <tr><td>검증내용</td><td></td><td>치수검증·외관검증·신뢰성검증 복수 선택. 항목별 내용·표·사진 첨부 가능</td></tr>
+                <tr><td>비고</td><td></td><td>기타 참고 사항 자유 입력</td></tr>
+                <tr><td>사진 등록</td><td></td><td>변경전·변경후 사진 첨부. 클릭 업로드 또는 Ctrl+V 붙여넣기 지원</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4. 화면별 기능 -->
+        <div class="guide-card">
+          <div class="guide-card-header" onclick="toggleGuide(this)">
+            <span>🖥️ &nbsp;화면별 주요 기능</span><span class="guide-arrow">▾</span>
+          </div>
+          <div class="guide-card-body">
+            <div class="guide-feature-list">
+              <div class="guide-feature"><div class="guide-feature-title">📊 종합현황</div><div>4M 유형별 건수, 조치결과 상태, 최근 등록 이력을 요약 카드로 한눈에 확인합니다.</div></div>
+              <div class="guide-feature"><div class="guide-feature-title">📋 이력</div><div>전체 변동점 목록 조회. 부서·유형·품종·상태 필터링, Excel 내보내기, 행 클릭 시 상세보기·수정·삭제 가능.</div></div>
+              <div class="guide-feature"><div class="guide-feature-title">🗂️ 모델별</div><div>품종 단위로 변동점 분류. 좌측 모델 선택 시 부품별 이력 표시. Excel 다운로드 지원.</div></div>
+              <div class="guide-feature"><div class="guide-feature-title">🏢 고객사별</div><div>고객사 기준 변동점 분류 및 Excel 다운로드.</div></div>
+              <div class="guide-feature"><div class="guide-feature-title">📑 신고기준별</div><div>신고/처리기준 항목 단위로 발생 현황 파악 및 Excel 다운로드.</div></div>
+              <div class="guide-feature"><div class="guide-feature-title">📋 4M 공문</div><div>Supplier 4M official letter 양식 확인 및 출력.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. FAQ -->
+        <div class="guide-card">
+          <div class="guide-card-header" onclick="toggleGuide(this)">
+            <span>❓ &nbsp;자주 묻는 질문</span><span class="guide-arrow">▾</span>
+          </div>
+          <div class="guide-card-body">
+            <div class="guide-faq"><div class="guide-faq-q">Q. 품종 드롭다운에 목록이 뜨지 않아요.</div><div class="guide-faq-a">A. BOM 파일이 업로드되지 않은 경우입니다. <strong>파일 업로드</strong> 탭에서 BOM을 업로드하세요. 이미 업로드되어 있다면 F5로 새로고침하세요.</div></div>
+            <div class="guide-faq"><div class="guide-faq-q">Q. 다른 기기에서 접속하면 데이터가 없어요.</div><div class="guide-faq-a">A. 데이터는 Supabase 서버에 저장됩니다. 인터넷 연결을 확인하고 페이지를 새로고침하세요.</div></div>
+            <div class="guide-faq"><div class="guide-faq-q">Q. 사진을 Ctrl+V로 붙여넣기하려면?</div><div class="guide-faq-a">A. 사진 업로드 영역을 <strong>클릭해 파란 테두리로 활성화</strong>한 뒤 <kbd>Ctrl+V</kbd>를 누르세요.</div></div>
+            <div class="guide-faq"><div class="guide-faq-q">Q. 검증내용 표 삽입은 어떻게 하나요?</div><div class="guide-faq-a">A. 검증 유형 선택 후 나타나는 입력란의 <strong>⊞ 표 삽입</strong> 버튼을 클릭해 행·열 수를 지정하면 텍스트 표 템플릿이 삽입됩니다.</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /tab-guide -->
+
   </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -1218,7 +1391,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
           <label class="form-label">조치시점</label>
           <input type="date" class="form-control" id="regActionDate">
         </div>
-        <!-- 조치결과 / 품질검증 -->
+        <!-- 조치결과 / 적용시점 / 품질검증 -->
         <div class="form-group">
           <label class="form-label">조치결과</label>
           <select class="form-control" id="regStatus">
@@ -1227,6 +1400,10 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
             <option value="완료">완료</option>
             <option value="지연">지연</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">적용시점</label>
+          <input type="date" class="form-control" id="regApplyDate">
         </div>
         <div class="form-group">
           <label class="form-label">품질검증</label>
@@ -1570,6 +1747,7 @@ function recToDb(r) {
     after_content: r.after || null,
     assignee: r.assignee || null,
     action_date: r.actionDate || null,
+    apply_date: r.applyDate || null,
     quality_check: r.qualityCheck || null,
     verification_data: r.verificationData || null,
     status: r.status || null,
@@ -1600,6 +1778,7 @@ function dbToRec(d) {
     after: d.after_content,
     assignee: d.assignee,
     actionDate: d.action_date,
+    applyDate: d.apply_date,
     qualityCheck: d.quality_check,
     verificationData: d.verification_data || null,
     status: d.status,
@@ -2209,6 +2388,26 @@ function setPasteTarget(type, e) {
   document.getElementById('photoSectionAfter').classList.toggle('paste-target', type === 'after');
   document.getElementById('pasteHintBefore').textContent = type === 'before' ? '📌 붙여넣기 활성' : '';
   document.getElementById('pasteHintAfter').textContent  = type === 'after'  ? '📌 붙여넣기 활성' : '';
+  // 검증 영역 활성 해제
+  document.querySelectorAll('[id^="verifyPasteArea_"]').forEach(el => el.classList.remove('paste-target'));
+  document.querySelectorAll('[id^="verifyPasteHint_"]').forEach(el => el.textContent = '');
+}
+
+function setVerifyPasteTarget(type, e) {
+  if (e && (e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL' || e.target.tagName === 'BUTTON')) return;
+  pasteTarget = 'verify:' + type;
+  // 기본 사진 영역 해제
+  document.getElementById('photoSectionBefore').classList.remove('paste-target');
+  document.getElementById('photoSectionAfter').classList.remove('paste-target');
+  document.getElementById('pasteHintBefore').textContent = '';
+  document.getElementById('pasteHintAfter').textContent  = '';
+  // 검증 영역 전체 해제 후 현재만 활성
+  document.querySelectorAll('[id^="verifyPasteArea_"]').forEach(el => el.classList.remove('paste-target'));
+  document.querySelectorAll('[id^="verifyPasteHint_"]').forEach(el => el.textContent = '');
+  const area = document.getElementById(`verifyPasteArea_${type}`);
+  const hint = document.getElementById(`verifyPasteHint_${type}`);
+  if (area) area.classList.add('paste-target');
+  if (hint) hint.textContent = '📌 붙여넣기 활성';
 }
 
 function handlePaste(e) {
@@ -2219,9 +2418,16 @@ function handlePaste(e) {
     if (item.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = ev => {
-        const arr = pasteTarget === 'before' ? photosBefore : photosAfter;
-        arr.push(ev.target.result);
-        renderPhotoGrid(pasteTarget);
+        if (pasteTarget.startsWith('verify:')) {
+          const type = pasteTarget.slice(7);
+          if (!_verifyPhotos[type]) _verifyPhotos[type] = [];
+          _verifyPhotos[type].push(ev.target.result);
+          renderVerifyPhotoGrid(type);
+        } else {
+          const arr = pasteTarget === 'before' ? photosBefore : photosAfter;
+          arr.push(ev.target.result);
+          renderPhotoGrid(pasteTarget);
+        }
       };
       reader.readAsDataURL(item.getAsFile());
       break;
@@ -2310,6 +2516,7 @@ function openRegModal(id) {
   document.getElementById('regPartType').value   = '';
   document.getElementById('regAssignee').value = '';
   document.getElementById('regActionDate').value = '';
+  document.getElementById('regApplyDate').value = '';
   document.getElementById('regQualityCheck').value = '';
   resetVerificationData();
   document.getElementById('regBefore').value = '';
@@ -2345,6 +2552,7 @@ function openRegModal(id) {
     document.getElementById('regPartType').value   = rec.partType    || '';
     document.getElementById('regAssignee').value = rec.assignee || '';
     document.getElementById('regActionDate').value = rec.actionDate || '';
+    document.getElementById('regApplyDate').value = rec.applyDate || '';
     document.getElementById('regQualityCheck').value = rec.qualityCheck || '';
     setVerificationData(rec.verificationData || null);
     document.getElementById('regBefore').value = rec.before;
@@ -2430,6 +2638,7 @@ function saveRecord() {
     after,
     assignee:     document.getElementById('regAssignee').value.trim(),
     actionDate:   document.getElementById('regActionDate').value,
+    applyDate:    document.getElementById('regApplyDate').value,
     qualityCheck: document.getElementById('regQualityCheck').value,
     verificationData: getVerificationData(),
     status:     document.getElementById('regStatus').value,
@@ -3411,6 +3620,7 @@ function openDetailModal(id) {
       <div class="detail-field"><label>신고/처리기준</label><div class="val" style="font-weight:700;color:#0d2b5e">${esc(detailLevel)}</div></div>
       <div class="detail-field"><label>변경 항목</label><div class="val">${esc(detailItemName)}</div></div>
       <div class="detail-field"><label>조치시점</label><div class="val">${r.actionDate||'-'}</div></div>
+      <div class="detail-field"><label>적용시점</label><div class="val">${r.applyDate||'-'}</div></div>
       <div class="detail-field"><label>부서명</label><div class="val">${r.dept||'-'}</div></div>
       <div class="detail-field"><label>담당자</label><div class="val">${r.assignee||'-'}</div></div>
       <div class="detail-field"><label>품질검증</label><div class="val">${r.qualityCheck||'-'}</div></div>
@@ -3555,6 +3765,18 @@ function detailPhotoHtml(r) {
 // ═══════════════════════════════════════
 let _verifyPhotos = {};
 
+function toggleGuide(header) {
+  const body  = header.nextElementSibling;
+  const arrow = header.querySelector('.guide-arrow');
+  const open  = body.classList.toggle('open');
+  arrow.classList.toggle('open', open);
+}
+
+function autoResizeTextarea(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
 function toggleVerifyDropdown() {
   const dd = document.getElementById('verifyDropdown');
   const open = dd.style.display !== 'none';
@@ -3619,25 +3841,33 @@ function createVerifyDetailBlock(type) {
   block.dataset.type = type;
   block.innerHTML = `
     <div class="verify-detail-label">📋 ${type} 내용</div>
-    <div style="display:flex;gap:6px;margin-bottom:6px">
-      <button type="button" onclick="showVerifyTablePicker('${type}')"
-        style="font-size:11px;padding:3px 10px;border:1px solid #cdd5e0;border-radius:4px;background:#fff;cursor:pointer;color:#1a3c6e">⊞ 표 삽입</button>
-      <label style="font-size:11px;padding:3px 10px;border:1px solid #cdd5e0;border-radius:4px;background:#fff;cursor:pointer;color:#1a3c6e;display:inline-flex;align-items:center">
-        📷 사진 추가
-        <input type="file" accept="image/*" multiple style="display:none" onchange="addVerifyPhotos('${type}',this)">
-      </label>
-    </div>
-    <div id="verifyTablePicker_${type}" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:10px;margin-bottom:6px">
-      <div style="font-size:12px;color:#64748b;margin-bottom:6px">표 크기 선택</div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <label style="font-size:12px">행 <input type="number" id="vt_rows_${type}" min="1" max="10" value="3" style="width:44px;padding:3px 6px;border:1px solid #cdd5e0;border-radius:4px"></label>
-        <label style="font-size:12px">열 <input type="number" id="vt_cols_${type}" min="1" max="8"  value="3" style="width:44px;padding:3px 6px;border:1px solid #cdd5e0;border-radius:4px"></label>
-        <button type="button" onclick="doInsertVerifyTable('${type}')" style="font-size:12px;padding:4px 12px;background:#1a3c6e;color:#fff;border:none;border-radius:4px;cursor:pointer">삽입</button>
-        <button type="button" onclick="document.getElementById('verifyTablePicker_${type}').style.display='none'" style="font-size:12px;padding:4px 8px;border:1px solid #cdd5e0;border-radius:4px;background:#fff;cursor:pointer">취소</button>
+    <div style="display:flex;gap:8px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
+        <button type="button" onclick="showVerifyTablePicker('${type}')"
+          style="font-size:11px;padding:5px 10px;border:1px solid #cdd5e0;border-radius:4px;background:#fff;cursor:pointer;color:#1a3c6e;white-space:nowrap">⊞ 표 삽입</button>
+        <label style="font-size:11px;padding:5px 10px;border:1px solid #cdd5e0;border-radius:4px;background:#fff;cursor:pointer;color:#1a3c6e;display:inline-flex;align-items:center;white-space:nowrap">
+          📷 사진 추가
+          <input type="file" accept="image/*" multiple style="display:none" onchange="addVerifyPhotos('${type}',this)">
+        </label>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div id="verifyTablePicker_${type}" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:10px;margin-bottom:6px">
+          <div style="font-size:12px;color:#64748b;margin-bottom:6px">표 크기 선택</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <label style="font-size:12px">행 <input type="number" id="vt_rows_${type}" min="1" max="10" value="3" style="width:44px;padding:3px 6px;border:1px solid #cdd5e0;border-radius:4px"></label>
+            <label style="font-size:12px">열 <input type="number" id="vt_cols_${type}" min="1" max="8"  value="3" style="width:44px;padding:3px 6px;border:1px solid #cdd5e0;border-radius:4px"></label>
+            <button type="button" onclick="doInsertVerifyTable('${type}')" style="font-size:12px;padding:4px 12px;background:#1a3c6e;color:#fff;border:none;border-radius:4px;cursor:pointer">삽입</button>
+            <button type="button" onclick="document.getElementById('verifyTablePicker_${type}').style.display='none'" style="font-size:12px;padding:4px 8px;border:1px solid #cdd5e0;border-radius:4px;background:#fff;cursor:pointer">취소</button>
+          </div>
+        </div>
+        <textarea id="verifyText_${type}" rows="4" class="form-control" placeholder="${type} 내용을 입력하세요" style="width:100%;font-size:13px;resize:none;min-height:80px;font-family:inherit;overflow:hidden" oninput="autoResizeTextarea(this)"></textarea>
+        <div id="verifyPasteArea_${type}" class="multi-photo-section" style="margin-top:6px;min-height:48px;height:auto" onclick="setVerifyPasteTarget('${type}',event)">
+          <span id="verifyPasteHint_${type}" style="font-size:11px;font-weight:800;color:#1565c0"></span>
+          <div class="verify-photo-grid" id="verifyPhotoGrid_${type}"></div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px">클릭 후 Ctrl+V 붙여넣기 또는 📷 사진 추가 버튼 사용</div>
+        </div>
       </div>
     </div>
-    <textarea id="verifyText_${type}" rows="3" class="form-control" placeholder="${type} 내용을 입력하세요" style="font-size:13px;resize:vertical;min-height:72px;font-family:inherit"></textarea>
-    <div class="verify-photo-grid" id="verifyPhotoGrid_${type}"></div>
   `;
   return block;
 }
@@ -3650,17 +3880,130 @@ function showVerifyTablePicker(type) {
 function doInsertVerifyTable(type) {
   const rows = Math.max(1, parseInt(document.getElementById(`vt_rows_${type}`).value) || 3);
   const cols = Math.max(1, parseInt(document.getElementById(`vt_cols_${type}`).value) || 3);
-  const ta   = document.getElementById(`verifyText_${type}`);
-  const w    = 8;
-  const sep  = Array(cols).fill('-'.repeat(w)).join('+');
-  const hdr  = Array.from({length:cols}, (_,i)=> `항목${i+1}`.padEnd(w)).join('|');
-  const row  = Array(cols).fill(' '.repeat(w)).join('|');
-  const tbl  = '\n' + hdr + '\n' + sep + '\n' + Array(rows).fill(row).join('\n') + '\n';
-  const pos  = ta.selectionStart;
-  ta.value   = ta.value.slice(0, pos) + tbl + ta.value.slice(ta.selectionEnd);
-  ta.selectionStart = ta.selectionEnd = pos + tbl.length;
-  ta.focus();
   document.getElementById(`verifyTablePicker_${type}`).style.display = 'none';
+
+  const block     = document.querySelector(`.verify-detail-block[data-type="${type}"]`);
+  const pasteArea = document.getElementById(`verifyPasteArea_${type}`);
+  const container = buildVerifyTableEl(rows, cols, null);
+  pasteArea.parentNode.insertBefore(container, pasteArea);
+}
+
+function buildVerifyTableEl(rows, cols, savedData) {
+  const container = document.createElement('div');
+  container.className = 'verify-tbl-container';
+
+  // ── 삭제 버튼
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'verify-tbl-remove';
+  removeBtn.textContent = '✕';
+  removeBtn.onclick = () => container.remove();
+  container.appendChild(removeBtn);
+
+  // ── 툴바 (색상 토글)
+  const toolbar = document.createElement('div');
+  toolbar.className = 'verify-tbl-toolbar';
+
+  const colorBtn = document.createElement('button');
+  colorBtn.type = 'button';
+  colorBtn.textContent = '🎨 색상';
+  colorBtn.title = '행 색상 켜기/끄기';
+  let colorOn = savedData?.colorOn !== false;
+  const applyColor = () => {
+    colorOn ? table.classList.remove('no-color') : table.classList.add('no-color');
+    colorBtn.classList.toggle('active', colorOn);
+  };
+  colorBtn.onclick = () => { colorOn = !colorOn; applyColor(); };
+  toolbar.appendChild(colorBtn);
+  container.appendChild(toolbar);
+
+  // ── 표 wrap
+  const wrap = document.createElement('div');
+  wrap.className = 'verify-tbl-wrap';
+
+  const table = document.createElement('table');
+  table.className = 'verify-tbl';
+
+  // colgroup
+  const cg = document.createElement('colgroup');
+  const addCol = (w) => { const c = document.createElement('col'); c.style.width = w + 'px'; cg.appendChild(c); };
+  for (let c = 0; c < cols; c++) addCol(savedData?.colWidths?.[c] ?? 120);
+  table.appendChild(cg);
+
+  // thead
+  const thead = document.createElement('thead');
+  const htr   = document.createElement('tr');
+  const makeHeaderTh = (label, ci) => {
+    const th = document.createElement('th');
+    th.contentEditable = 'true';
+    th.textContent = label;
+    const handle = document.createElement('div');
+    handle.className = 'col-resize-handle';
+    handle.addEventListener('mousedown', e => startColResize(e, cg.children[ci], handle));
+    th.appendChild(handle);
+    th.addEventListener('contextmenu', e => showVerifyCtxMenu(e, th, table, cg));
+    return th;
+  };
+  for (let c = 0; c < cols; c++) htr.appendChild(makeHeaderTh(savedData?.headers?.[c] ?? `열${c+1}`, c));
+  thead.appendChild(htr);
+  table.appendChild(thead);
+
+  // tbody
+  const tbody = document.createElement('tbody');
+  const makeCell = (text) => {
+    const td = document.createElement('td');
+    td.contentEditable = 'true';
+    td.textContent = text ?? '';
+    td.addEventListener('contextmenu', e => showVerifyCtxMenu(e, td, table, cg));
+    return td;
+  };
+  const addRow = (rowData) => {
+    const tr = document.createElement('tr');
+    const colCount = cg.children.length;
+    for (let c = 0; c < colCount; c++) tr.appendChild(makeCell(rowData?.[c]));
+    tbody.appendChild(tr);
+    return tr;
+  };
+  for (let r = 0; r < rows; r++) addRow(savedData?.rows?.[r]);
+  table.appendChild(tbody);
+
+  // 테이블에 행/열 추가 헬퍼 저장
+  table._addRow = addRow;
+  table._makeCell = makeCell;
+  table._makeHeaderTh = (label, ci) => makeHeaderTh(label, ci);
+  table._addColHelper = (label, ci) => {
+    addCol(120);
+    htr.appendChild(makeHeaderTh(label, cg.children.length - 1));
+    [...tbody.querySelectorAll('tr')].forEach(tr => tr.appendChild(makeCell('')));
+  };
+
+  wrap.appendChild(table);
+  container.appendChild(wrap);
+
+  // 색상 초기 적용
+  applyColor();
+
+  return container;
+}
+
+function startColResize(e, col, handle) {
+  e.preventDefault();
+  e.stopPropagation();
+  const startX = e.clientX;
+  const startW = parseInt(col.style.width) || 120;
+  handle.classList.add('dragging');
+
+  function onMove(e) {
+    const w = Math.max(40, startW + (e.clientX - startX));
+    col.style.width = w + 'px';
+  }
+  function onUp() {
+    handle.classList.remove('dragging');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
 }
 
 function addVerifyPhotos(type, input) {
@@ -3707,8 +4050,17 @@ function getVerificationData() {
   if (selected.includes('해당없음')) return { items: ['해당없음'], details: {} };
   const details = {};
   selected.forEach(type => {
-    const ta = document.getElementById(`verifyText_${type}`);
-    details[type] = { text: ta ? ta.value : '', photos: _verifyPhotos[type] || [] };
+    const ta    = document.getElementById(`verifyText_${type}`);
+    const block = document.querySelector(`.verify-detail-block[data-type="${type}"]`);
+    const tables = block ? [...block.querySelectorAll('.verify-tbl')].map(tbl => {
+      const cg      = tbl.querySelector('colgroup');
+      const headers = [...tbl.querySelectorAll('thead th')].map(th => th.childNodes[0]?.textContent?.trim() ?? '');
+      const rows    = [...tbl.querySelectorAll('tbody tr')].map(tr => [...tr.querySelectorAll('td')].map(td => td.textContent));
+      const colWidths = cg ? [...cg.children].map(c => parseInt(c.style.width) || 120) : [];
+      const colorOn   = !tbl.classList.contains('no-color');
+      return { headers, rows, colWidths, colorOn };
+    }) : [];
+    details[type] = { text: ta ? ta.value : '', tables, photos: _verifyPhotos[type] || [] };
   });
   return { items: selected, details };
 }
@@ -3724,7 +4076,16 @@ function setVerificationData(data) {
   if (data.details) {
     Object.entries(data.details).forEach(([t, d]) => {
       const ta = document.getElementById(`verifyText_${t}`);
-      if (ta) ta.value = d.text || '';
+      if (ta) { ta.value = d.text || ''; autoResizeTextarea(ta); }
+      if (d.tables && d.tables.length) {
+        const pasteArea = document.getElementById(`verifyPasteArea_${t}`);
+        if (pasteArea) {
+          d.tables.forEach(tData => {
+            const el = buildVerifyTableEl(tData.rows.length, tData.headers.length, tData);
+            pasteArea.parentNode.insertBefore(el, pasteArea);
+          });
+        }
+      }
       renderVerifyPhotoGrid(t);
     });
   }
@@ -3738,8 +4099,18 @@ function renderVerifyDetailView(data) {
   const parts = (data.items || []).filter(t => t !== '해당없음').map(type => {
     const d = (data.details || {})[type] || {};
     const textHtml = d.text ? `<pre style="font-size:12px;white-space:pre-wrap;margin:4px 0 6px;font-family:inherit;color:#334155">${esc(d.text)}</pre>` : '';
-    const photos = (d.photos || []).map((src,i) => `<img src="${src}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;cursor:pointer" onclick="openImgPreview('${src}')">`).join('');
-    return `<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#1a3c6e;margin-bottom:4px">${esc(type)}</div>${textHtml}${photos ? `<div style="display:flex;flex-wrap:wrap;gap:4px">${photos}</div>` : ''}</div>`;
+    const tablesHtml = (d.tables || []).map(tData => {
+      if (!tData.headers || !tData.rows) return '';
+      const thCells = tData.headers.map(h => `<th style="background:#1a3c6e;color:#fff;font-size:11px;font-weight:700;padding:5px 8px;border:1px solid #0d2b5e;white-space:nowrap">${esc(h)}</th>`).join('');
+      const trRows = tData.rows.map((row, ri) => {
+        const bg = ri % 2 === 0 ? '#fff' : '#dbeafe';
+        const tds = row.map(cell => `<td style="border:1px solid #c7d6ea;padding:5px 8px;font-size:11px;background:${bg}">${esc(cell)}</td>`).join('');
+        return `<tr>${tds}</tr>`;
+      }).join('');
+      return `<div style="overflow-x:auto;margin:6px 0"><table style="border-collapse:collapse;font-size:11px"><thead><tr>${thCells}</tr></thead><tbody>${trRows}</tbody></table></div>`;
+    }).join('');
+    const photos = (d.photos || []).map(src => `<img src="${src}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;cursor:pointer" onclick="openImgPreview('${src}')">`).join('');
+    return `<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#1a3c6e;margin-bottom:4px">${esc(type)}</div>${textHtml}${tablesHtml}${photos ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${photos}</div>` : ''}</div>`;
   }).join('');
   return `<div class="detail-field" style="grid-column:1/-1"><label>검증내용</label><div class="val">${parts}</div></div>`;
 }
@@ -3925,6 +4296,118 @@ document.addEventListener('keydown', e => {
     closeRegModal(); closeDetailModal(); closeConfirm(); closePhotoViewer();
   }
 });
+// ═══════════════════════════════════════
+//  VERIFY TABLE CONTEXT MENU
+// ═══════════════════════════════════════
+let _ctxCell = null, _ctxTable = null, _ctxCg = null;
+
+function showVerifyCtxMenu(e, cell, table, cg) {
+  e.preventDefault();
+  e.stopPropagation();
+  _ctxCell = cell; _ctxTable = table; _ctxCg = cg;
+  const menu = document.getElementById('verifyCtxMenu');
+  menu.style.display = 'block';
+  const x = Math.min(e.clientX, window.innerWidth  - menu.offsetWidth  - 8);
+  const y = Math.min(e.clientY, window.innerHeight - menu.offsetHeight - 8);
+  menu.style.left = x + 'px';
+  menu.style.top  = y + 'px';
+}
+
+document.addEventListener('click',       () => { document.getElementById('verifyCtxMenu').style.display = 'none'; });
+document.addEventListener('contextmenu', e  => { if (!e.target.closest('#verifyCtxMenu')) document.getElementById('verifyCtxMenu').style.display = 'none'; });
+
+function ctxAddRow(pos) {
+  document.getElementById('verifyCtxMenu').style.display = 'none';
+  if (!_ctxTable) return;
+  const tbody = _ctxTable.querySelector('tbody');
+  const allRows = [...tbody.querySelectorAll('tr')];
+  const targetRow = _ctxCell.closest('tr');
+  const idx = allRows.indexOf(targetRow);
+  const colCount = _ctxCg ? _ctxCg.children.length : (_ctxTable.querySelector('thead tr')?.children.length ?? 1);
+  const newTr = document.createElement('tr');
+  for (let c = 0; c < colCount; c++) {
+    const td = document.createElement('td');
+    td.contentEditable = 'true';
+    td.addEventListener('contextmenu', e => showVerifyCtxMenu(e, td, _ctxTable, _ctxCg));
+    newTr.appendChild(td);
+  }
+  if (pos === 'above') tbody.insertBefore(newTr, targetRow);
+  else                 targetRow.after(newTr);
+}
+
+function ctxAddCol(pos) {
+  document.getElementById('verifyCtxMenu').style.display = 'none';
+  if (!_ctxTable || !_ctxCg) return;
+  const headerCells = [..._ctxTable.querySelectorAll('thead th')];
+  const targetTh = _ctxCell.tagName === 'TH' ? _ctxCell : _ctxCell.closest('tr') ? null : null;
+  const allThs   = [..._ctxTable.querySelectorAll('thead th')];
+  let ci = allThs.indexOf(_ctxCell.tagName === 'TH' ? _ctxCell : _ctxCell.parentNode?.children[_ctxCell.cellIndex] ?? allThs[0]);
+  if (ci < 0) ci = allThs.length - 1;
+  const insertIdx = pos === 'left' ? ci : ci + 1;
+
+  // colgroup
+  const newColEl = document.createElement('col');
+  newColEl.style.width = '120px';
+  if (insertIdx >= _ctxCg.children.length) _ctxCg.appendChild(newColEl);
+  else _ctxCg.insertBefore(newColEl, _ctxCg.children[insertIdx]);
+
+  // header
+  const htr   = _ctxTable.querySelector('thead tr');
+  const newTh = document.createElement('th');
+  newTh.contentEditable = 'true';
+  newTh.textContent = `열${insertIdx + 1}`;
+  const handle = document.createElement('div');
+  handle.className = 'col-resize-handle';
+  handle.addEventListener('mousedown', e => startColResize(e, newColEl, handle));
+  newTh.appendChild(handle);
+  newTh.addEventListener('contextmenu', e => showVerifyCtxMenu(e, newTh, _ctxTable, _ctxCg));
+  if (insertIdx >= htr.children.length) htr.appendChild(newTh);
+  else htr.insertBefore(newTh, htr.children[insertIdx]);
+
+  // body rows
+  [..._ctxTable.querySelectorAll('tbody tr')].forEach(tr => {
+    const newTd = document.createElement('td');
+    newTd.contentEditable = 'true';
+    newTd.addEventListener('contextmenu', e => showVerifyCtxMenu(e, newTd, _ctxTable, _ctxCg));
+    if (insertIdx >= tr.children.length) tr.appendChild(newTd);
+    else tr.insertBefore(newTd, tr.children[insertIdx]);
+  });
+}
+
+function ctxDeleteRow() {
+  document.getElementById('verifyCtxMenu').style.display = 'none';
+  if (!_ctxCell) return;
+  const tr = _ctxCell.closest('tr');
+  if (!tr) return;
+  const tbody = _ctxTable?.querySelector('tbody');
+  if (!tbody || tbody.querySelectorAll('tr').length <= 1) return;
+  tr.remove();
+}
+
+function ctxDeleteCol() {
+  document.getElementById('verifyCtxMenu').style.display = 'none';
+  if (!_ctxTable || !_ctxCg) return;
+  const allThs = [..._ctxTable.querySelectorAll('thead th')];
+  if (allThs.length <= 1) return;
+  const targetTh = _ctxCell.tagName === 'TH' ? _ctxCell : null;
+  let ci = targetTh ? allThs.indexOf(targetTh) : (_ctxCell.cellIndex ?? -1);
+  if (ci < 0) return;
+  _ctxCg.children[ci]?.remove();
+  allThs[ci]?.remove();
+  [..._ctxTable.querySelectorAll('tbody tr')].forEach(tr => tr.children[ci]?.remove());
+}
 </script>
+
+<!-- 우클릭 컨텍스트 메뉴 -->
+<div id="verifyCtxMenu">
+  <div class="ctx-item" onclick="ctxAddRow('above')">⬆ 위에 행 추가</div>
+  <div class="ctx-item" onclick="ctxAddRow('below')">⬇ 아래에 행 추가</div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item" onclick="ctxAddCol('left')">⬅ 왼쪽에 열 추가</div>
+  <div class="ctx-item" onclick="ctxAddCol('right')">➡ 오른쪽에 열 추가</div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item danger" onclick="ctxDeleteRow()">✕ 행 삭제</div>
+  <div class="ctx-item danger" onclick="ctxDeleteCol()">✕ 열 삭제</div>
+</div>
 </body>
 </html>
