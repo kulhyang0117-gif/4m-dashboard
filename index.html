@@ -321,6 +321,14 @@ body.view-mobile .toolbar{flex-wrap:nowrap;overflow-x:auto}
 body.view-mobile .toolbar::-webkit-scrollbar{display:none}
 body.view-mobile .toast{bottom:76px;right:14px}
 body.view-mobile .confirm-box{width:calc(100vw - 32px)}
+body.view-mobile .sidebar-close-btn{display:block !important}
+body.view-mobile .inner-split{flex-direction:column !important;overflow:visible !important;height:auto !important}
+body.view-mobile .inner-list{width:100% !important;border-right:none !important;border-bottom:1.5px solid #dde3ee;overflow-x:auto !important;overflow-y:hidden !important;flex-shrink:0 !important;padding:6px 8px !important}
+body.view-mobile .inner-list > div:first-child{display:none !important}
+body.view-mobile .inner-list > div:last-child{display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;gap:6px !important;width:max-content}
+body.view-mobile .inner-list > div:last-child > div{border-left:none !important;border-radius:16px !important;padding:5px 12px !important;font-size:12px !important;flex-shrink:0 !important;white-space:nowrap !important;justify-content:center !important}
+body.view-mobile .inner-content{padding:12px !important;overflow-y:visible !important}
+body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px) !important;flex-direction:column !important}
 
 @media (max-width:768px) {
   .hamburger-btn{display:flex}
@@ -350,6 +358,14 @@ body.view-mobile .confirm-box{width:calc(100vw - 32px)}
   .toolbar::-webkit-scrollbar{display:none}
   .toast{bottom:76px;right:14px}
   .confirm-box{width:calc(100vw - 32px)}
+  .sidebar-close-btn{display:block !important}
+  .inner-split{flex-direction:column !important;overflow:visible !important;height:auto !important}
+  .inner-list{width:100% !important;border-right:none !important;border-bottom:1.5px solid #dde3ee;overflow-x:auto !important;overflow-y:hidden !important;flex-shrink:0 !important;padding:6px 8px !important}
+  .inner-list > div:first-child{display:none !important}
+  .inner-list > div:last-child{display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;gap:6px !important;width:max-content}
+  .inner-list > div:last-child > div{border-left:none !important;border-radius:16px !important;padding:5px 12px !important;font-size:12px !important;flex-shrink:0 !important;white-space:nowrap !important;justify-content:center !important}
+  .inner-content{padding:12px !important;overflow-y:visible !important}
+  .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px) !important;flex-direction:column !important}
 }
 </style>
 </head>
@@ -392,6 +408,7 @@ body.view-mobile .confirm-box{width:calc(100vw - 32px)}
 <div class="layout">
   <!-- SIDEBAR -->
   <div class="sidebar" id="sidebar">
+    <button class="sidebar-close-btn" onclick="closeDrawer()" style="display:none;align-self:flex-end;background:none;border:none;font-size:22px;cursor:pointer;color:#64748b;padding:2px 6px;line-height:1;margin-bottom:4px">✕</button>
     <button class="nav-btn" onclick="showTab('letter')" id="nav-letter">
       <span class="nav-icon">📋</span><span class="nav-txt">4M 공문</span>
     </button>
@@ -883,7 +900,7 @@ body.view-mobile .confirm-box{width:calc(100vw - 32px)}
       <div class="toolbar">
         <div class="toolbar-title">변동점 등록 이력</div>
         <button class="btn btn-primary" onclick="openRegModal()">+ 변동점 등록</button>
-        <button class="btn btn-outline" onclick="exportCSV()">📥 CSV 내보내기</button>
+        <button class="btn btn-outline" onclick="exportExcel()">📥 Excel 내보내기</button>
       </div>
       <div class="filter-row">
         <select id="filterDept" onchange="renderHistory()">
@@ -941,14 +958,14 @@ body.view-mobile .confirm-box{width:calc(100vw - 32px)}
         <button class="btn btn-primary" onclick="openRegModal()">+ 변동점 등록</button>
       </div>
       <!-- 2단 레이아웃 -->
-      <div style="display:flex;flex:1;overflow:hidden;min-height:0">
+      <div class="inner-split" style="display:flex;flex:1;overflow:hidden;min-height:0">
         <!-- 좌측 모델 목록 -->
-        <div style="width:190px;flex-shrink:0;border-right:1.5px solid #dde3ee;overflow-y:auto;background:#f8fafc">
+        <div class="inner-list" style="width:190px;flex-shrink:0;border-right:1.5px solid #dde3ee;overflow-y:auto;background:#f8fafc">
           <div style="padding:10px 14px 6px;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase">모델 목록</div>
           <div id="mvModelList"></div>
         </div>
         <!-- 우측 품목 목록 -->
-        <div style="flex:1;overflow-y:auto;padding:20px 24px" id="mvContent">
+        <div class="inner-content" style="flex:1;overflow-y:auto;padding:20px 24px" id="mvContent">
           <div style="color:#94a3b8;font-size:14px;padding:40px 0;text-align:center">
             ← 왼쪽에서 모델을 선택하세요
           </div>
@@ -964,12 +981,12 @@ body.view-mobile .confirm-box{width:calc(100vw - 32px)}
           style="padding:7px 12px;border:1px solid #dde3ee;border-radius:7px;font-size:13px;width:200px;outline:none">
         <button class="btn btn-primary" onclick="openRegModal()">+ 변동점 등록</button>
       </div>
-      <div style="display:flex;flex:1;overflow:hidden;min-height:0">
-        <div style="width:190px;flex-shrink:0;border-right:1.5px solid #dde3ee;overflow-y:auto;background:#f8fafc">
+      <div class="inner-split" style="display:flex;flex:1;overflow:hidden;min-height:0">
+        <div class="inner-list" style="width:190px;flex-shrink:0;border-right:1.5px solid #dde3ee;overflow-y:auto;background:#f8fafc">
           <div style="padding:10px 14px 6px;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase">고객사 목록</div>
           <div id="cvCustomerList"></div>
         </div>
-        <div style="flex:1;overflow-y:auto;padding:20px 24px" id="cvContent">
+        <div class="inner-content" style="flex:1;overflow-y:auto;padding:20px 24px" id="cvContent">
           <div style="color:#94a3b8;font-size:14px;padding:40px 0;text-align:center">
             ← 왼쪽에서 고객사를 선택하세요
           </div>
@@ -985,12 +1002,12 @@ body.view-mobile .confirm-box{width:calc(100vw - 32px)}
           style="padding:7px 12px;border:1px solid #dde3ee;border-radius:7px;font-size:13px;width:200px;outline:none">
         <button class="btn btn-primary" onclick="openRegModal()">+ 변동점 등록</button>
       </div>
-      <div style="display:flex;flex:1;overflow:hidden;min-height:0">
-        <div style="width:190px;flex-shrink:0;border-right:1.5px solid #dde3ee;overflow-y:auto;background:#f8fafc">
+      <div class="inner-split" style="display:flex;flex:1;overflow:hidden;min-height:0">
+        <div class="inner-list" style="width:190px;flex-shrink:0;border-right:1.5px solid #dde3ee;overflow-y:auto;background:#f8fafc">
           <div style="padding:10px 14px 6px;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase">기준 목록</div>
           <div id="rvLevelList"></div>
         </div>
-        <div style="flex:1;overflow-y:auto;padding:20px 24px" id="rvContent">
+        <div class="inner-content" style="flex:1;overflow-y:auto;padding:20px 24px" id="rvContent">
           <div style="color:#94a3b8;font-size:14px;padding:40px 0;text-align:center">
             ← 왼쪽에서 신고/처리기준을 선택하세요
           </div>
@@ -1340,12 +1357,39 @@ function loadBomFromIDB() {
     req.onsuccess = e => {
       db.close();
       const saved = e.target.result;
-      if (!saved || saved.version < 6) return;
+      if (!saved || saved.version < 6) { sbLoadBom(); return; }
       bomData = { masterList: saved.masterList };
       updateBomUI(saved.fileName, saved.loadTime);
     };
-    req.onerror = () => db.close();
-  }).catch(err => console.error('IDB load error:', err));
+    req.onerror = () => { db.close(); sbLoadBom(); };
+  }).catch(() => sbLoadBom());
+}
+
+async function sbSaveBom(masterList, fileName, loadTime) {
+  const { error } = await _sb.from('bom_data').upsert({
+    key: 'current',
+    master_list: masterList,
+    file_name: fileName,
+    load_time: loadTime,
+    updated_at: new Date().toISOString()
+  });
+  if (error) {
+    console.error('BOM Supabase 저장 오류:', error);
+    showToast('⚠️ BOM 서버 동기화 실패: ' + error.message);
+  } else {
+    showToast('☁️ BOM 서버 동기화 완료');
+  }
+}
+
+async function sbLoadBom() {
+  try {
+    const { data, error } = await _sb.from('bom_data').select('*').eq('key', 'current').single();
+    if (error || !data) return;
+    bomData = { masterList: data.master_list };
+    updateBomUI(data.file_name, data.load_time);
+    // IDB에도 캐시
+    saveBomToIDB({ version: 6, masterList: data.master_list, fileName: data.file_name, loadTime: data.load_time });
+  } catch(e) { console.error('BOM Supabase 로드 오류:', e); }
 }
 
 function clearBomFromIDB() {
@@ -1710,7 +1754,7 @@ function showTab(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.m-nav-item2').forEach(b => b.classList.remove('active'));
   const panel = document.getElementById('tab-' + name);
-  panel.style.display = name === 'model' || name === 'customer' ? 'flex' : 'block';
+  panel.style.display = (name === 'model' || name === 'customer' || name === 'reportstd') ? 'flex' : 'block';
   panel.classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
   const mb = document.getElementById('mnav-' + name);
@@ -1748,6 +1792,7 @@ function handleBomFile(file) {
       const loadTime = new Date().toLocaleString('ko-KR');
       updateBomUI(file.name, loadTime);
       saveBomToIDB({ version: 6, masterList, fileName: file.name, loadTime });
+      sbSaveBom(masterList, file.name, loadTime);
       showToast(`✅ BOM 저장 완료 (${families.length}개 품종 · ${masterList.length}건) — 영구 보존`);
     } catch(err) {
       console.error(err);
@@ -3470,20 +3515,62 @@ function detailPhotoHtml(r) {
 }
 
 // ═══════════════════════════════════════
-//  EXPORT CSV
+//  EXPORT EXCEL
 // ═══════════════════════════════════════
-function exportCSV() {
+async function exportExcel() {
+  if (!records || records.length === 0) { alert('내보낼 데이터가 없습니다.'); return; }
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('4M변동점이력');
+
+  ws.columns = [
+    { width: 5 },  // No
+    { width: 13 }, // 등록일
+    { width: 12 }, // 4M유형
+    { width: 14 }, // 모델코드
+    { width: 20 }, // 모델명
+    { width: 14 }, // 부품코드
+    { width: 20 }, // 부품명
+    { width: 30 }, // 변경전내용
+    { width: 30 }, // 변경후내용
+    { width: 10 }, // 상태
+    { width: 20 }, // 비고
+  ];
+
+  const borderThin = { top:{style:'thin',color:{argb:'FFD0D9E8'}}, bottom:{style:'thin',color:{argb:'FFD0D9E8'}}, left:{style:'thin',color:{argb:'FFD0D9E8'}}, right:{style:'thin',color:{argb:'FFD0D9E8'}} };
+
+  // 헤더행
   const headers = ['No','등록일','4M유형','모델코드','모델명','부품코드','부품명','변경전내용','변경후내용','상태','비고'];
-  const rows = records.map((r,i) => [
-    i+1, r.date, r.type4m, r.modelCode||'', r.modelName||'',
-    r.partCode||'', r.partName||'', `"${(r.before||'').replace(/"/g,'""')}"`,
-    `"${(r.after||'').replace(/"/g,'""')}"`, r.status, r.note||''
-  ]);
-  const csv = '\uFEFF' + [headers, ...rows].map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `4M변동점이력_${new Date().toISOString().slice(0,10)}.csv`;
+  const headerRow = ws.addRow(headers);
+  headerRow.height = 20;
+  headerRow.eachCell(cell => {
+    cell.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3C6E' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: false };
+    cell.border = borderThin;
+  });
+
+  // 데이터행
+  records.forEach((r, i) => {
+    const row = ws.addRow([
+      i + 1, r.date||'', r.type4m||'', r.modelCode||'', r.modelName||'',
+      r.partCode||'', r.partName||'', r.before||'', r.after||'', r.status||'', r.note||''
+    ]);
+    row.height = 18;
+    row.eachCell((cell, col) => {
+      cell.font = { size: 10 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i % 2 === 0 ? 'FFFFFFFF' : 'FFF8FAFC' } };
+      cell.alignment = { horizontal: col <= 3 || col === 10 ? 'center' : 'left', vertical: 'middle', wrapText: col >= 8 && col <= 9 };
+      cell.border = borderThin;
+    });
+  });
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: `4M변동점이력_${new Date().toISOString().slice(0,10)}.xlsx`
+  });
   a.click();
 }
 
@@ -3578,10 +3665,7 @@ document.addEventListener('mouseout', e => {
   if (e.target.matches('.photo-thumb, .multi-thumb img')) _hoverPreview.hide();
 });
 
-// Close modals on overlay click
-document.getElementById('regModal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeRegModal();
-});
+// detailModal만 overlay 클릭으로 닫기 (regModal은 버튼으로만 닫기)
 document.getElementById('detailModal').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeDetailModal();
 });
