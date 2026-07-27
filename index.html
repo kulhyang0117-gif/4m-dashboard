@@ -105,6 +105,16 @@ tfoot td{background:#0d2b5e;color:#fff;padding:8px 10px;font-size:12px;font-weig
 .photo-thumb:hover{transform:scale(1.08);box-shadow:0 4px 12px rgba(0,0,0,.2)}
 .no-photo{color:#bbb;font-size:11px}
 
+/* ── VERIFICATION SECTION ── */
+.verify-dropdown{position:absolute;top:100%;left:0;z-index:700;background:#fff;border:1px solid #cdd5e0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);padding:6px 0;min-width:180px;margin-top:2px}
+.verify-dropdown label{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;font-size:13px;user-select:none}
+.verify-dropdown label:hover{background:#f0f5ff}
+.verify-detail-block{border:1px solid #c7d6ea;border-radius:8px;padding:12px;margin-top:10px;background:#f8fafc}
+.verify-detail-label{font-size:12px;font-weight:700;color:#1a3c6e;margin-bottom:8px}
+.verify-photo-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.verify-photo-thumb{position:relative;width:68px;height:68px;border-radius:6px;overflow:hidden;border:1px solid #e2e8f0;cursor:pointer}
+.verify-photo-thumb img{width:100%;height:100%;object-fit:cover}
+.verify-photo-remove{position:absolute;top:2px;right:2px;background:rgba(198,40,40,.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center}
 /* ── MODAL ── */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center}
 .modal-overlay.open{display:flex}
@@ -1228,6 +1238,24 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
             <option value="해당없음">해당없음</option>
           </select>
         </div>
+        <!-- 검증내용 -->
+        <div class="form-group form-full">
+          <label class="form-label">검증내용</label>
+          <div style="position:relative">
+            <button type="button" id="verifyTrigger" onclick="toggleVerifyDropdown()"
+              style="width:100%;text-align:left;background:#fff;border:1px solid #cdd5e0;border-radius:6px;padding:8px 12px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;align-items:center">
+              <span id="verifyTriggerText" style="color:#94a3b8">-- 선택 --</span>
+              <span style="color:#94a3b8;font-size:11px">▾</span>
+            </button>
+            <div id="verifyDropdown" class="verify-dropdown" style="display:none">
+              <label><input type="checkbox" value="해당없음"  onchange="onVerifyCheck(this)"> 해당없음</label>
+              <label><input type="checkbox" value="치수검증"  onchange="onVerifyCheck(this)"> 치수검증</label>
+              <label><input type="checkbox" value="외관검증"  onchange="onVerifyCheck(this)"> 외관검증</label>
+              <label><input type="checkbox" value="신뢰성검증" onchange="onVerifyCheck(this)"> 신뢰성 검증</label>
+            </div>
+          </div>
+          <div id="verifyDetails"></div>
+        </div>
         <!-- 비고 -->
         <div class="form-group form-full">
           <label class="form-label">비고</label>
@@ -1543,6 +1571,7 @@ function recToDb(r) {
     assignee: r.assignee || null,
     action_date: r.actionDate || null,
     quality_check: r.qualityCheck || null,
+    verification_data: r.verificationData || null,
     status: r.status || null,
     note: r.note || null,
     photos_before: r.photosBefore || [],
@@ -1572,6 +1601,7 @@ function dbToRec(d) {
     assignee: d.assignee,
     actionDate: d.action_date,
     qualityCheck: d.quality_check,
+    verificationData: d.verification_data || null,
     status: d.status,
     note: d.note,
     photosBefore: d.photos_before || [],
@@ -2281,6 +2311,7 @@ function openRegModal(id) {
   document.getElementById('regAssignee').value = '';
   document.getElementById('regActionDate').value = '';
   document.getElementById('regQualityCheck').value = '';
+  resetVerificationData();
   document.getElementById('regBefore').value = '';
   document.getElementById('regAfter').value = '';
   document.getElementById('regStatus').value = '대기';
@@ -2315,6 +2346,7 @@ function openRegModal(id) {
     document.getElementById('regAssignee').value = rec.assignee || '';
     document.getElementById('regActionDate').value = rec.actionDate || '';
     document.getElementById('regQualityCheck').value = rec.qualityCheck || '';
+    setVerificationData(rec.verificationData || null);
     document.getElementById('regBefore').value = rec.before;
     document.getElementById('regAfter').value = rec.after;
     document.getElementById('regStatus').value = rec.status;
@@ -2399,6 +2431,7 @@ function saveRecord() {
     assignee:     document.getElementById('regAssignee').value.trim(),
     actionDate:   document.getElementById('regActionDate').value,
     qualityCheck: document.getElementById('regQualityCheck').value,
+    verificationData: getVerificationData(),
     status:     document.getElementById('regStatus').value,
     note:       document.getElementById('regNote').value.trim(),
     photosBefore: photosBefore.slice(),
@@ -3381,6 +3414,7 @@ function openDetailModal(id) {
       <div class="detail-field"><label>부서명</label><div class="val">${r.dept||'-'}</div></div>
       <div class="detail-field"><label>담당자</label><div class="val">${r.assignee||'-'}</div></div>
       <div class="detail-field"><label>품질검증</label><div class="val">${r.qualityCheck||'-'}</div></div>
+      ${renderVerifyDetailView(r.verificationData)}
       <div class="detail-field"><label>모델명</label><div class="val">${r.modelName||'-'}</div></div>
       <div class="detail-field"><label>부품코드</label><div class="val">${r.partCode||'-'}</div></div>
       <div class="detail-field"><label>고객사 P/N</label><div class="val">${r.custPartNo||'-'}</div></div>
@@ -3514,6 +3548,216 @@ function detailPhotoHtml(r) {
         ${grid(paArr,'#2e7d32')}
       </div>
     </div>`;
+}
+
+// ═══════════════════════════════════════
+//  VERIFICATION (검증내용)
+// ═══════════════════════════════════════
+let _verifyPhotos = {};
+
+function toggleVerifyDropdown() {
+  const dd = document.getElementById('verifyDropdown');
+  const open = dd.style.display !== 'none';
+  dd.style.display = open ? 'none' : 'block';
+}
+
+document.addEventListener('click', e => {
+  const trigger = document.getElementById('verifyTrigger');
+  const dd = document.getElementById('verifyDropdown');
+  if (trigger && dd && !trigger.contains(e.target) && !dd.contains(e.target)) {
+    dd.style.display = 'none';
+  }
+});
+
+function onVerifyCheck(cb) {
+  const cbs = [...document.querySelectorAll('#verifyDropdown input[type=checkbox]')];
+  if (cb.value === '해당없음' && cb.checked) {
+    cbs.forEach(c => { if (c.value !== '해당없음') c.checked = false; });
+  } else if (cb.checked) {
+    cbs.find(c => c.value === '해당없음').checked = false;
+  }
+  updateVerifyTriggerLabel();
+  renderVerifyDetails();
+}
+
+function updateVerifyTriggerLabel() {
+  const sel = getSelectedVerifyItems();
+  const span = document.getElementById('verifyTriggerText');
+  if (!span) return;
+  span.textContent = sel.length ? sel.join(', ') : '-- 선택 --';
+  span.style.color = sel.length ? '#334155' : '#94a3b8';
+}
+
+function getSelectedVerifyItems() {
+  return [...document.querySelectorAll('#verifyDropdown input[type=checkbox]:checked')].map(c => c.value);
+}
+
+function renderVerifyDetails() {
+  const selected = getSelectedVerifyItems().filter(t => t !== '해당없음');
+  const container = document.getElementById('verifyDetails');
+
+  // 삭제된 항목 블록 제거
+  [...container.querySelectorAll('.verify-detail-block')].forEach(block => {
+    if (!selected.includes(block.dataset.type)) {
+      delete _verifyPhotos[block.dataset.type];
+      block.remove();
+    }
+  });
+
+  // 새 항목 블록 추가 (순서 유지)
+  selected.forEach(type => {
+    if (!container.querySelector(`.verify-detail-block[data-type="${type}"]`)) {
+      if (!_verifyPhotos[type]) _verifyPhotos[type] = [];
+      container.appendChild(createVerifyDetailBlock(type));
+    }
+  });
+}
+
+function createVerifyDetailBlock(type) {
+  const block = document.createElement('div');
+  block.className = 'verify-detail-block';
+  block.dataset.type = type;
+  block.innerHTML = `
+    <div class="verify-detail-label">📋 ${type} 내용</div>
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <button type="button" onclick="showVerifyTablePicker('${type}')"
+        style="font-size:11px;padding:3px 10px;border:1px solid #cdd5e0;border-radius:4px;background:#fff;cursor:pointer;color:#1a3c6e">⊞ 표 삽입</button>
+      <label style="font-size:11px;padding:3px 10px;border:1px solid #cdd5e0;border-radius:4px;background:#fff;cursor:pointer;color:#1a3c6e;display:inline-flex;align-items:center">
+        📷 사진 추가
+        <input type="file" accept="image/*" multiple style="display:none" onchange="addVerifyPhotos('${type}',this)">
+      </label>
+    </div>
+    <div id="verifyTablePicker_${type}" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:10px;margin-bottom:6px">
+      <div style="font-size:12px;color:#64748b;margin-bottom:6px">표 크기 선택</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label style="font-size:12px">행 <input type="number" id="vt_rows_${type}" min="1" max="10" value="3" style="width:44px;padding:3px 6px;border:1px solid #cdd5e0;border-radius:4px"></label>
+        <label style="font-size:12px">열 <input type="number" id="vt_cols_${type}" min="1" max="8"  value="3" style="width:44px;padding:3px 6px;border:1px solid #cdd5e0;border-radius:4px"></label>
+        <button type="button" onclick="doInsertVerifyTable('${type}')" style="font-size:12px;padding:4px 12px;background:#1a3c6e;color:#fff;border:none;border-radius:4px;cursor:pointer">삽입</button>
+        <button type="button" onclick="document.getElementById('verifyTablePicker_${type}').style.display='none'" style="font-size:12px;padding:4px 8px;border:1px solid #cdd5e0;border-radius:4px;background:#fff;cursor:pointer">취소</button>
+      </div>
+    </div>
+    <textarea id="verifyText_${type}" rows="3" class="form-control" placeholder="${type} 내용을 입력하세요" style="font-size:13px;resize:vertical;min-height:72px;font-family:inherit"></textarea>
+    <div class="verify-photo-grid" id="verifyPhotoGrid_${type}"></div>
+  `;
+  return block;
+}
+
+function showVerifyTablePicker(type) {
+  const picker = document.getElementById(`verifyTablePicker_${type}`);
+  picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+}
+
+function doInsertVerifyTable(type) {
+  const rows = Math.max(1, parseInt(document.getElementById(`vt_rows_${type}`).value) || 3);
+  const cols = Math.max(1, parseInt(document.getElementById(`vt_cols_${type}`).value) || 3);
+  const ta   = document.getElementById(`verifyText_${type}`);
+  const w    = 8;
+  const sep  = Array(cols).fill('-'.repeat(w)).join('+');
+  const hdr  = Array.from({length:cols}, (_,i)=> `항목${i+1}`.padEnd(w)).join('|');
+  const row  = Array(cols).fill(' '.repeat(w)).join('|');
+  const tbl  = '\n' + hdr + '\n' + sep + '\n' + Array(rows).fill(row).join('\n') + '\n';
+  const pos  = ta.selectionStart;
+  ta.value   = ta.value.slice(0, pos) + tbl + ta.value.slice(ta.selectionEnd);
+  ta.selectionStart = ta.selectionEnd = pos + tbl.length;
+  ta.focus();
+  document.getElementById(`verifyTablePicker_${type}`).style.display = 'none';
+}
+
+function addVerifyPhotos(type, input) {
+  if (!_verifyPhotos[type]) _verifyPhotos[type] = [];
+  [...input.files].forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      _verifyPhotos[type].push(e.target.result);
+      renderVerifyPhotoGrid(type);
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function removeVerifyPhoto(type, idx) {
+  if (_verifyPhotos[type]) { _verifyPhotos[type].splice(idx, 1); renderVerifyPhotoGrid(type); }
+}
+
+function renderVerifyPhotoGrid(type) {
+  const grid = document.getElementById(`verifyPhotoGrid_${type}`);
+  if (!grid) return;
+  const photos = _verifyPhotos[type] || [];
+  grid.innerHTML = photos.map((src, i) => `
+    <div class="verify-photo-thumb">
+      <img src="${src}" onclick="openVerifyPhotoPreview('${type}',${i})">
+      <button type="button" class="verify-photo-remove" onclick="removeVerifyPhoto('${type}',${i})">✕</button>
+    </div>`).join('');
+}
+
+function openVerifyPhotoPreview(type, idx) {
+  const src = (_verifyPhotos[type] || [])[idx];
+  if (!src) return;
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9000;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+  ov.innerHTML = `<img src="${src}" style="max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.5)">`;
+  ov.onclick = () => ov.remove();
+  document.body.appendChild(ov);
+}
+
+function getVerificationData() {
+  const selected = getSelectedVerifyItems();
+  if (!selected.length) return null;
+  if (selected.includes('해당없음')) return { items: ['해당없음'], details: {} };
+  const details = {};
+  selected.forEach(type => {
+    const ta = document.getElementById(`verifyText_${type}`);
+    details[type] = { text: ta ? ta.value : '', photos: _verifyPhotos[type] || [] };
+  });
+  return { items: selected, details };
+}
+
+function setVerificationData(data) {
+  resetVerificationData();
+  if (!data || !data.items || !data.items.length) return;
+  const cbs = [...document.querySelectorAll('#verifyDropdown input[type=checkbox]')];
+  data.items.forEach(item => { const c = cbs.find(x => x.value === item); if (c) c.checked = true; });
+  if (data.details) Object.entries(data.details).forEach(([t, d]) => { _verifyPhotos[t] = d.photos || []; });
+  updateVerifyTriggerLabel();
+  renderVerifyDetails();
+  if (data.details) {
+    Object.entries(data.details).forEach(([t, d]) => {
+      const ta = document.getElementById(`verifyText_${t}`);
+      if (ta) ta.value = d.text || '';
+      renderVerifyPhotoGrid(t);
+    });
+  }
+}
+
+function renderVerifyDetailView(data) {
+  if (!data || !data.items || !data.items.length) return '';
+  if (data.items.includes('해당없음')) {
+    return `<div class="detail-field" style="grid-column:1/-1"><label>검증내용</label><div class="val">해당없음</div></div>`;
+  }
+  const parts = (data.items || []).filter(t => t !== '해당없음').map(type => {
+    const d = (data.details || {})[type] || {};
+    const textHtml = d.text ? `<pre style="font-size:12px;white-space:pre-wrap;margin:4px 0 6px;font-family:inherit;color:#334155">${esc(d.text)}</pre>` : '';
+    const photos = (d.photos || []).map((src,i) => `<img src="${src}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;cursor:pointer" onclick="openImgPreview('${src}')">`).join('');
+    return `<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#1a3c6e;margin-bottom:4px">${esc(type)}</div>${textHtml}${photos ? `<div style="display:flex;flex-wrap:wrap;gap:4px">${photos}</div>` : ''}</div>`;
+  }).join('');
+  return `<div class="detail-field" style="grid-column:1/-1"><label>검증내용</label><div class="val">${parts}</div></div>`;
+}
+
+function openImgPreview(src) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9000;display:flex;align-items:center;justify-content:center;cursor:zoom-out';
+  ov.innerHTML = `<img src="${src}" style="max-width:90vw;max-height:90vh;border-radius:8px">`;
+  ov.onclick = () => ov.remove();
+  document.body.appendChild(ov);
+}
+
+function resetVerificationData() {
+  document.querySelectorAll('#verifyDropdown input[type=checkbox]').forEach(c => c.checked = false);
+  _verifyPhotos = {};
+  updateVerifyTriggerLabel();
+  const det = document.getElementById('verifyDetails');
+  if (det) det.innerHTML = '';
 }
 
 // ═══════════════════════════════════════
