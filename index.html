@@ -955,7 +955,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
           <thead>
             <tr>
               <th>No</th><th>등록일</th><th>부서</th><th>4M 유형</th><th>품종</th><th>부품명</th><th>고객사</th>
-              <th>변경전 내용</th><th>변경후 내용</th><th>변경전 사진</th><th>변경후 사진</th><th>상태</th><th>관리</th>
+              <th>변경전 내용</th><th>변경후 내용</th><th>조치시점</th><th>검증내용</th><th>상태</th><th>관리</th>
             </tr>
           </thead>
           <tbody id="overviewTbody"></tbody>
@@ -1006,8 +1006,8 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
         <table>
           <thead>
             <tr>
-              <th>No</th><th>등록일</th><th>부서</th><th>4M 유형</th><th>신고/처리기준</th><th>품종코드</th><th>품종명</th><th>부품코드</th><th>부품명</th><th>고객사</th>
-              <th>변경전 내용</th><th>변경후 내용</th><th>변경전 사진</th><th>변경후 사진</th><th>상태</th><th>비고</th><th>관리</th>
+              <th>No</th><th>등록일</th><th>부서</th><th>4M 유형</th><th>신고/처리기준</th><th>품종명</th><th>부품코드</th><th>부품명</th><th>고객사</th>
+              <th>변경전 내용</th><th>변경후 내용</th><th>조치시점</th><th>검증내용</th><th>상태</th><th>비고</th><th>관리</th>
             </tr>
           </thead>
           <tbody id="historyTbody"></tbody>
@@ -2743,7 +2743,7 @@ function renderOverview() {
   const recent = records.slice(0,10);
   const tbody = document.getElementById('overviewTbody');
   if (recent.length === 0) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="12">등록된 변동점이 없습니다. [+ 변동점 등록] 버튼을 클릭하여 등록하세요.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="14">등록된 변동점이 없습니다. [+ 변동점 등록] 버튼을 클릭하여 등록하세요.</td></tr>';
     return;
   }
   tbody.innerHTML = recent.map((r,i) => `
@@ -2755,10 +2755,10 @@ function renderOverview() {
       <td style="font-size:11px">${r.modelName||r.modelCode||'-'}</td>
       <td style="font-size:11px">${r.partName||'-'}</td>
       <td style="font-size:11px">${r.customer||'-'}</td>
-      <td class="td-wrap">${esc(r.before)}</td>
-      <td class="td-wrap">${esc(r.after)}</td>
-      <td>${photoThumb(r,'before')}</td>
-      <td>${photoThumb(r,'after')}</td>
+      <td class="td-wrap">${esc(r.before)}${r.photosBefore?.length?`<div style="margin-top:4px">${photoThumb(r,'before')}</div>`:''}</td>
+      <td class="td-wrap">${esc(r.after)}${r.photosAfter?.length?`<div style="margin-top:4px">${photoThumb(r,'after')}</div>`:''}</td>
+      <td style="font-size:11px;white-space:nowrap">${r.actionDate||'-'}</td>
+      <td style="font-size:11px">${verifyBadge(r.verificationData)}</td>
       <td>${signalBadge(r.status)}</td>
       <td><button class="btn-sm-edit" onclick="event.stopPropagation();openRegModal('${r.id}')">수정</button></td>
     </tr>
@@ -2785,7 +2785,7 @@ function renderHistory() {
 
   const tbody = document.getElementById('historyTbody');
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="17">조건에 맞는 이력이 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="16">조건에 맞는 이력이 없습니다.</td></tr>';
     document.getElementById('historyFoot').innerHTML = '<td colspan="16">합계: 0건</td>';
     return;
   }
@@ -2797,15 +2797,14 @@ function renderHistory() {
       <td style="font-size:11px;font-weight:700">${r.dept||'-'}</td>
       <td>${badge4m(r.type4m)}</td>
       <td style="font-size:11px;white-space:nowrap">${esc(_rvGetLevel(r)||'-')}</td>
-      <td style="font-size:11px">${r.modelCode||'-'}</td>
       <td style="font-size:11px">${r.modelName||'-'}</td>
       <td style="font-size:11px">${r.partCode||'-'}</td>
       <td style="font-size:11px">${r.partName||'-'}</td>
       <td style="font-size:11px">${r.customer||'-'}</td>
-      <td class="td-wrap">${esc(r.before)}</td>
-      <td class="td-wrap">${esc(r.after)}</td>
-      <td>${photoThumb(r,'before')}</td>
-      <td>${photoThumb(r,'after')}</td>
+      <td class="td-wrap">${esc(r.before)}${r.photosBefore?.length?`<div style="margin-top:4px">${photoThumb(r,'before')}</div>`:''}</td>
+      <td class="td-wrap">${esc(r.after)}${r.photosAfter?.length?`<div style="margin-top:4px">${photoThumb(r,'after')}</div>`:''}</td>
+      <td style="font-size:11px;white-space:nowrap">${r.actionDate||'-'}</td>
+      <td style="font-size:11px">${verifyBadge(r.verificationData)}</td>
       <td>${signalBadge(r.status)}</td>
       <td class="td-wrap" style="max-width:120px">${esc(r.note||'-')}</td>
       <td style="white-space:nowrap">
@@ -2817,7 +2816,7 @@ function renderHistory() {
   `).join('');
 
   document.getElementById('historyFoot').innerHTML =
-    `<td colspan="16">합계: ${filtered.length}건 &nbsp;|&nbsp; 완료: ${filtered.filter(r=>r.status==='완료').length}건 &nbsp;|&nbsp; 완료율: ${filtered.length?Math.round(filtered.filter(r=>r.status==='완료').length/filtered.length*100):0}%</td>`;
+    `<td colspan="16">합계: ${filtered.length}건 &nbsp;|&nbsp; 완료: ${filtered.filter(r=>r.status==='완료').length}건 &nbsp;|&nbsp; 완료율: ${filtered.length?Math.round(filtered.filter(r=>r.status==='완료').length/filtered.length*100):0}%</td>`; // 16cols: No+등록일+부서+4M+신고기준+품종명+부품코드+부품명+고객사+변경전+변경후+조치시점+검증내용+상태+비고+관리
 }
 
 // ═══════════════════════════════════════
@@ -3613,28 +3612,32 @@ function openDetailModal(id) {
   const detailItemName = r.changeItemNo ? (CHANGE_ITEMS.find(it => it.no === r.changeItemNo)?.name || '-') : '-';
 
   document.getElementById('detailModalBody').innerHTML = `
-    <div class="detail-info-grid">
-      <div class="detail-field"><label>등록일</label><div class="val">${r.date}</div></div>
+    <!-- 기본 정보 -->
+    <div class="section-title">📌 기본 정보</div>
+    <div class="detail-info-grid" style="margin-bottom:14px">
+      <div class="detail-field"><label>등록일</label><div class="val">${r.date||'-'}</div></div>
       <div class="detail-field"><label>4M 유형</label><div class="val">${badge4m(r.type4m)}</div></div>
-      <div class="detail-field"><label>처리 상태</label><div class="val">${signalBadge(r.status)}</div></div>
-      <div class="detail-field"><label>신고/처리기준</label><div class="val" style="font-weight:700;color:#0d2b5e">${esc(detailLevel)}</div></div>
-      <div class="detail-field"><label>변경 항목</label><div class="val">${esc(detailItemName)}</div></div>
-      <div class="detail-field"><label>조치시점</label><div class="val">${r.actionDate||'-'}</div></div>
-      <div class="detail-field"><label>적용시점</label><div class="val">${r.applyDate||'-'}</div></div>
       <div class="detail-field"><label>부서명</label><div class="val">${r.dept||'-'}</div></div>
       <div class="detail-field"><label>담당자</label><div class="val">${r.assignee||'-'}</div></div>
-      <div class="detail-field"><label>품질검증</label><div class="val">${r.qualityCheck||'-'}</div></div>
-      ${renderVerifyDetailView(r.verificationData)}
-      <div class="detail-field"><label>모델명</label><div class="val">${r.modelName||'-'}</div></div>
-      <div class="detail-field"><label>부품코드</label><div class="val">${r.partCode||'-'}</div></div>
-      <div class="detail-field"><label>고객사 P/N</label><div class="val">${r.custPartNo||'-'}</div></div>
-      <div class="detail-field"><label>고객사</label><div class="val">${r.customer||'-'}</div></div>
-      <div class="detail-field" style="grid-column:1/-1"><label>부품명</label><div class="val">${r.partName||'-'}</div></div>
+      <div class="detail-field"><label>신고/처리기준</label><div class="val" style="font-weight:700;color:#0d2b5e">${esc(detailLevel)}</div></div>
+      <div class="detail-field"><label>변경 항목</label><div class="val">${esc(detailItemName)}</div></div>
     </div>
-    ${r.changeDesc ? `
-    <div class="section-title">📌 변경내용 (기준)</div>
-    <div class="detail-txt-box" style="margin-bottom:14px;background:#f0f7ff;border-color:#bcd4f5;color:#1e3a5f">${esc(r.changeDesc)}</div>` : ''}
-    <div class="section-title">📋 변경 내용</div>
+
+    <!-- 품종·부품 정보 -->
+    <div class="section-title">🗂️ 품종 · 부품 정보</div>
+    <div class="detail-info-grid" style="margin-bottom:14px">
+      <div class="detail-field"><label>품종코드</label><div class="val">${r.modelCode||'-'}</div></div>
+      <div class="detail-field"><label>품종명</label><div class="val">${r.modelName||'-'}</div></div>
+      <div class="detail-field"><label>품목유형</label><div class="val">${r.partType||'-'}</div></div>
+      <div class="detail-field"><label>부품코드</label><div class="val">${r.partCode||'-'}</div></div>
+      <div class="detail-field"><label>부품명</label><div class="val">${r.partName||'-'}</div></div>
+      <div class="detail-field"><label>고객사</label><div class="val">${r.customer||'-'}</div></div>
+      <div class="detail-field"><label>고객사 P/N</label><div class="val">${r.custPartNo||'-'}</div></div>
+    </div>
+
+    <!-- 변경 내용 -->
+    ${r.changeDesc ? `<div class="section-title">📌 변경내용 (기준)</div><div class="detail-txt-box" style="margin-bottom:14px;background:#f0f7ff;border-color:#bcd4f5;color:#1e3a5f">${esc(r.changeDesc)}</div>` : ''}
+    <div class="section-title">📋 변경 전 · 후 내용</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div>
         <div style="font-size:12px;font-weight:800;color:#e65100;margin-bottom:5px">▶ 변경전</div>
@@ -3645,6 +3648,17 @@ function openDetailModal(id) {
         <div class="detail-txt-box">${esc(r.after)}</div>
       </div>
     </div>
+
+    <!-- 조치 정보 -->
+    <div class="section-title">⚙️ 조치 정보</div>
+    <div class="detail-info-grid" style="margin-bottom:14px">
+      <div class="detail-field"><label>조치시점</label><div class="val">${r.actionDate||'-'}</div></div>
+      <div class="detail-field"><label>적용시점</label><div class="val">${r.applyDate||'-'}</div></div>
+      <div class="detail-field"><label>조치결과</label><div class="val">${signalBadge(r.status)}</div></div>
+      <div class="detail-field"><label>품질검증</label><div class="val">${r.qualityCheck||'-'}</div></div>
+      ${renderVerifyDetailView(r.verificationData)}
+    </div>
+
     ${r.note ? `<div class="section-title">📝 비고</div><div class="detail-txt-box" style="margin-bottom:14px">${esc(r.note)}</div>` : ''}
     <div id="detailAttachSection"></div>
     ${detailPhotoHtml(r)}
@@ -3724,6 +3738,15 @@ function pvNav(dir) {
 function closePhotoViewer() {
   document.getElementById('photoViewer').classList.remove('open');
   _pvPhotos = []; _pvIdx = 0;
+}
+
+// ── VERIFY BADGE ──
+function verifyBadge(vd) {
+  if (!vd || !vd.items || !vd.items.length) return '<span style="color:#94a3b8">-</span>';
+  return vd.items.map(item => {
+    const none = item === '해당없음';
+    return `<span style="display:inline-block;font-size:10px;background:${none?'#f1f5f9':'#eef3ff'};color:${none?'#64748b':'#1a3c6e'};border-radius:3px;padding:1px 6px;font-weight:600;margin:1px">${esc(item)}</span>`;
+  }).join('');
 }
 
 // ── PHOTO HELPER ──
@@ -3935,10 +3958,14 @@ function buildVerifyTableEl(rows, cols, savedData) {
   const htr   = document.createElement('tr');
   const makeHeaderTh = (label, ci) => {
     const th = document.createElement('th');
-    th.contentEditable = 'true';
-    th.textContent = label;
+    const span = document.createElement('span');
+    span.contentEditable = 'true';
+    span.textContent = label;
+    span.style.cssText = 'outline:none;display:inline-block;max-width:calc(100% - 10px);vertical-align:middle';
+    th.appendChild(span);
     const handle = document.createElement('div');
     handle.className = 'col-resize-handle';
+    handle.contentEditable = 'false';
     handle.addEventListener('mousedown', e => startColResize(e, cg.children[ci], handle));
     th.appendChild(handle);
     th.addEventListener('contextmenu', e => showVerifyCtxMenu(e, th, table, cg));
@@ -4054,7 +4081,7 @@ function getVerificationData() {
     const block = document.querySelector(`.verify-detail-block[data-type="${type}"]`);
     const tables = block ? [...block.querySelectorAll('.verify-tbl')].map(tbl => {
       const cg      = tbl.querySelector('colgroup');
-      const headers = [...tbl.querySelectorAll('thead th')].map(th => th.childNodes[0]?.textContent?.trim() ?? '');
+      const headers = [...tbl.querySelectorAll('thead th')].map(th => (th.querySelector('span') || th).textContent?.trim() ?? '');
       const rows    = [...tbl.querySelectorAll('tbody tr')].map(tr => [...tr.querySelectorAll('td')].map(td => td.textContent));
       const colWidths = cg ? [...cg.children].map(c => parseInt(c.style.width) || 120) : [];
       const colorOn   = !tbl.classList.contains('no-color');
@@ -4354,8 +4381,11 @@ function ctxAddCol(pos) {
   // header
   const htr   = _ctxTable.querySelector('thead tr');
   const newTh = document.createElement('th');
-  newTh.contentEditable = 'true';
-  newTh.textContent = `열${insertIdx + 1}`;
+  const newSpan = document.createElement('span');
+  newSpan.contentEditable = 'true';
+  newSpan.textContent = `열${insertIdx + 1}`;
+  newSpan.style.cssText = 'outline:none;display:inline-block;max-width:calc(100% - 10px);vertical-align:middle';
+  newTh.appendChild(newSpan);
   const handle = document.createElement('div');
   handle.className = 'col-resize-handle';
   handle.addEventListener('mousedown', e => startColResize(e, newColEl, handle));
