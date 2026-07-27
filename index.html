@@ -1696,6 +1696,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Supabase에서 데이터 로드 후 렌더
   await sbLoad();
   renderAll();
+  // IDB 유무와 관계없이 항상 Supabase 최신 BOM으로 갱신
+  sbLoadBom();
 });
 
 // ═══════════════════════════════════════
