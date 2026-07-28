@@ -431,6 +431,23 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
   .inner-content{padding:12px !important;overflow-y:visible !important}
   .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px) !important;flex-direction:column !important}
 }
+
+/* ── AUTH ── */
+.auth-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#0d2b5e;z-index:99999;display:flex;align-items:center;justify-content:center;}
+.auth-box{background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.35);padding:40px 36px;width:400px;max-width:95vw;}
+.auth-title{text-align:center;margin-bottom:24px;}
+.auth-title .t1{font-size:20px;font-weight:800;color:#0d2b5e;}
+.auth-title .t2{font-size:12px;color:#888;margin-top:4px;}
+.auth-label{font-size:12px;color:#555;display:block;margin-top:13px;margin-bottom:3px;font-weight:600;}
+.auth-input{width:100%;padding:10px 13px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;box-sizing:border-box;}
+.auth-input:focus{outline:none;border-color:#0d2b5e;}
+.auth-btn{width:100%;padding:12px;background:#0d2b5e;color:#fff;border:none;border-radius:7px;font-size:14px;cursor:pointer;font-weight:700;margin-top:14px;}
+.auth-btn:hover{background:#1e5799;}
+.auth-err{color:#e74c3c;font-size:12px;margin-top:8px;display:none;}
+.auth-link{text-align:center;margin-top:13px;font-size:12px;color:#0d2b5e;cursor:pointer;text-decoration:underline;}
+.auth-logout-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;padding:5px 13px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;}
+.auth-logout-btn:hover{background:rgba(255,255,255,.25);}
+.auth-user-info{color:rgba(255,255,255,.85);font-size:12px;margin-right:8px;}
 </style>
 </head>
 <body>
@@ -448,6 +465,10 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
       <span id="bomStatusTxt">BOM 미로드</span>
     </div>
     <div class="header-date" id="headerDate"></div>
+    <div id="authUserBar" style="display:none;align-items:center;gap:8px">
+      <span class="auth-user-info" id="authUserName"></span>
+      <button class="auth-logout-btn" onclick="authLogout()">로그아웃</button>
+    </div>
     <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleViewMode()">📱 모바일</button>
   </div>
 </div>
@@ -466,6 +487,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
     <button class="m-nav-item2" id="mnav-reportstd" onclick="showTab('reportstd');closeDrawer()"><span class="mni">📑</span>신고기준별</button>
     <button class="m-nav-item2" id="mnav-upload"    onclick="showTab('upload');closeDrawer()"><span class="mni">📂</span>업로드</button>
     <button class="m-nav-item2" id="mnav-guide"    onclick="showTab('guide');closeDrawer()"><span class="mni">📖</span>가이드</button>
+    <button class="m-nav-item2" id="mnav-users"   onclick="showTab('users');closeDrawer()" style="display:none"><span class="mni">👥</span>회원관리</button>
   </div>
 </nav>
 
@@ -497,6 +519,9 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
     </button>
     <button class="nav-btn" onclick="showTab('guide')" id="nav-guide">
       <span class="nav-icon">📖</span><span class="nav-txt">이용 가이드</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('users')" id="nav-users" style="display:none">
+      <span class="nav-icon">👥</span><span class="nav-txt">회원관리 <span id="badge-users" style="display:none;background:#e74c3c;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:2px">0</span></span>
     </button>
     <button class="sidebar-toggle" onclick="toggleSidebar()">◀</button>
   </div>
@@ -1115,6 +1140,46 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
       </div>
     </div>
 
+    <!-- ═══ TAB: 회원관리 ═══ -->
+    <div class="tab-panel" id="tab-users" style="display:none">
+      <div class="toolbar"><div class="toolbar-title">회원관리</div></div>
+      <div style="background:#fff;border-radius:10px;padding:20px 24px;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-size:15px;font-weight:700;color:#0d2b5e;">회원 목록</div>
+          <button onclick="loadUsersFromSupabase()" style="font-size:11px;padding:5px 12px;background:#1e5799;color:#fff;border:none;border-radius:5px;cursor:pointer;">☁ 새로고침</button>
+        </div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:#0d2b5e;color:#fff;">
+              <th style="padding:8px 10px;text-align:center;">팀</th>
+              <th style="padding:8px 10px;text-align:center;">직책</th>
+              <th style="padding:8px 10px;text-align:center;">이름</th>
+              <th style="padding:8px 10px;text-align:center;">이메일</th>
+              <th style="padding:8px 10px;text-align:center;">권한</th>
+              <th style="padding:8px 10px;text-align:center;">상태</th>
+              <th style="padding:8px 10px;text-align:center;">가입일</th>
+              <th style="padding:8px 10px;text-align:center;">관리</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid #eee;background:#f0f4f8;">
+              <td style="padding:8px 10px;text-align:center;">조립팀</td>
+              <td style="padding:8px 10px;text-align:center;">팀장</td>
+              <td style="padding:8px 10px;text-align:center;font-weight:700;">양춘향</td>
+              <td style="padding:8px 10px;text-align:center;">kulhyang0117@gmail.com</td>
+              <td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:#e65100;">관리자</span></td>
+              <td style="padding:8px 10px;text-align:center;color:#28a745;font-weight:700;">승인됨</td>
+              <td style="padding:8px 10px;text-align:center;font-size:11px;color:#aaa;">-</td>
+              <td style="padding:8px 10px;text-align:center;font-size:11px;color:#aaa;">시스템 고정</td>
+            </tr>
+          </tbody>
+          <tbody id="users-tbody"></tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══ TAB: 이용 가이드 ═══ -->
     <div class="tab-panel" id="tab-guide">
       <div class="toolbar"><div class="toolbar-title">이용 가이드</div></div>
@@ -1727,6 +1792,152 @@ const SUPABASE_URL = 'https://mbbzerxdyxiiwfmvbfns.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iYnplcnhkeXhpaXdmbXZiZm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzOTkxODIsImV4cCI6MjA5MTk3NTE4Mn0.8uqIFtHs7wBJVYQTGrnhQXho-I57GTOz1S8XGeLK2T0';
 const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ═══════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════
+let _currentUser = null;
+
+async function authInit() {
+  const { data: { session } } = await _sb.auth.getSession();
+  if (session) {
+    const { data: profile } = await _sb.from('users_profile').select('*').eq('id', session.user.id).maybeSingle();
+    if (profile && profile.status === 'approved') {
+      _currentUser = profile;
+      document.getElementById('authOverlay').style.display = 'none';
+      _updateAuthBar();
+      return true;
+    }
+    await _sb.auth.signOut();
+  }
+  document.getElementById('authOverlay').style.display = 'flex';
+  return false;
+}
+
+async function authLogin() {
+  const email = (document.getElementById('authEmail').value || '').trim();
+  const pw = document.getElementById('authPassword').value || '';
+  const remember = document.getElementById('authRemember').checked;
+  const errEl = document.getElementById('authError');
+  const showErr = msg => { errEl.textContent = msg; errEl.style.display = 'block'; };
+  if (!email || !pw) { showErr('이메일과 비밀번호를 입력하세요.'); return; }
+  if (remember) { localStorage.setItem('4m_remember_email', email); }
+  else { localStorage.removeItem('4m_remember_email'); }
+  showErr('확인 중...');
+  const { data, error } = await _sb.auth.signInWithPassword({ email, password: pw });
+  if (error) { showErr('이메일 또는 비밀번호가 올바르지 않습니다.'); return; }
+  const { data: profile, error: pErr } = await _sb.from('users_profile').select('*').eq('email', data.user.email).maybeSingle();
+  if (pErr || !profile) { showErr('프로필 오류: ' + (pErr ? pErr.message : 'profile null, email=' + data.user.email)); await _sb.auth.signOut(); return; }
+  if (profile.status === 'pending') { showErr('승인 대기 중입니다. 관리자 승인 후 로그인 가능합니다.'); await _sb.auth.signOut(); return; }
+  if (profile.status === 'rejected') { showErr('가입이 거절되었습니다.'); await _sb.auth.signOut(); return; }
+  _currentUser = profile;
+  document.getElementById('authOverlay').style.display = 'none';
+  errEl.style.display = 'none';
+  _updateAuthBar();
+  await sbLoad();
+  renderAll();
+  sbLoadBom();
+}
+
+async function authSignup() {
+  const dept = document.getElementById('suDept').value;
+  const name = (document.getElementById('suName').value || '').trim();
+  const email = (document.getElementById('suEmail').value || '').trim();
+  const pw = document.getElementById('suPassword').value || '';
+  const errEl = document.getElementById('suError');
+  if (!dept || !name || !email || !pw) { errEl.textContent = '모든 항목을 입력하세요.'; errEl.style.display = ''; return; }
+  if (pw.length < 6) { errEl.textContent = '비밀번호는 6자 이상이어야 합니다.'; errEl.style.display = ''; return; }
+  errEl.textContent = '처리 중...'; errEl.style.display = '';
+  const { data, error } = await _sb.auth.signUp({ email, password: pw, options: { data: { name, dept } } });
+  if (error) { errEl.textContent = error.message.toLowerCase().includes('already') ? '이미 가입된 이메일입니다.' : '오류: ' + error.message; errEl.style.display = ''; return; }
+  await _sb.from('users_profile').upsert({ id: data.user.id, email, name, dept, role: 'user', position: '팀원', status: 'pending', created_at: new Date().toISOString() });
+  errEl.style.display = 'none';
+  alert('가입 신청이 완료되었습니다.\n관리자 승인 후 로그인하실 수 있습니다.');
+  authShowLogin();
+}
+
+async function authLogout() {
+  if (!confirm('로그아웃 하시겠습니까?')) return;
+  await _sb.auth.signOut();
+  _currentUser = null;
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  document.getElementById('authError').style.display = 'none';
+  authShowLogin();
+  document.getElementById('authOverlay').style.display = 'flex';
+  document.getElementById('authUserBar').style.display = 'none';
+}
+
+function authShowLogin() {
+  document.getElementById('authLoginForm').style.display = '';
+  document.getElementById('authSignupForm').style.display = 'none';
+  document.getElementById('authError').style.display = 'none';
+}
+function authShowSignup() {
+  document.getElementById('authLoginForm').style.display = 'none';
+  document.getElementById('authSignupForm').style.display = '';
+  document.getElementById('suError').style.display = 'none';
+}
+function _updateAuthBar() {
+  const bar = document.getElementById('authUserBar');
+  if (bar && _currentUser) {
+    bar.style.display = 'flex';
+    document.getElementById('authUserName').textContent = (_currentUser.name || '') + ' (' + (_currentUser.dept || '') + ')';
+  }
+  // 관리자만 회원관리 메뉴 표시
+  const isAdmin = _currentUser && _currentUser.role === 'admin';
+  const navUsers = document.getElementById('nav-users');
+  const mnavUsers = document.getElementById('mnav-users');
+  if (navUsers) navUsers.style.display = isAdmin ? '' : 'none';
+  if (mnavUsers) mnavUsers.style.display = isAdmin ? '' : 'none';
+}
+
+async function loadUsersFromSupabase() {
+  const tbody = document.getElementById('users-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#888;">불러오는 중...</td></tr>';
+  const { data: users, error } = await _sb.from('users_profile').select('*').order('created_at', { ascending: false });
+  if (error) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#e74c3c;">오류: ' + error.message + '</td></tr>'; return; }
+  const ADMIN_EMAIL = 'kulhyang0117@gmail.com';
+  const others = (users || []).filter(u => u.email !== ADMIN_EMAIL);
+  const pendingCount = others.filter(u => u.status === 'pending').length;
+  const badge = document.getElementById('badge-users');
+  if (badge) { badge.textContent = pendingCount; badge.style.display = pendingCount > 0 ? '' : 'none'; }
+  if (!others.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#888;">등록된 회원이 없습니다.</td></tr>'; return; }
+  tbody.innerHTML = others.map(u => {
+    const statusColor = u.status === 'approved' ? '#28a745' : u.status === 'rejected' ? '#e74c3c' : '#f39c12';
+    const statusText = u.status === 'approved' ? '승인됨' : u.status === 'rejected' ? '거절됨' : '대기중';
+    const roleText = u.role === 'admin' ? '<span style="font-size:11px;font-weight:700;color:#e65100;">관리자</span>' : '일반';
+    const actions = u.status === 'pending'
+      ? `<button onclick="approveUser('${u.id}')" style="background:#28a745;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">승인</button><button onclick="rejectUser('${u.id}')" style="background:#e74c3c;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">거절</button>`
+      : '';
+    const deleteBtn = `<button onclick="deleteUserSb('${u.id}')" style="background:#888;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;margin-left:4px;">삭제</button>`;
+    return `<tr style="border-bottom:1px solid #eee;">
+      <td style="padding:8px 10px;text-align:center;">${u.dept || '-'}</td>
+      <td style="padding:8px 10px;text-align:center;">${u.position || '-'}</td>
+      <td style="padding:8px 10px;text-align:center;font-weight:700;">${u.name || '-'}</td>
+      <td style="padding:8px 10px;text-align:center;">${u.email || ''}</td>
+      <td style="padding:8px 10px;text-align:center;">${roleText}</td>
+      <td style="padding:8px 10px;text-align:center;color:${statusColor};font-weight:700;">${statusText}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:11px;color:#aaa;">${(u.created_at || '').substring(0, 10)}</td>
+      <td style="padding:8px 10px;text-align:center;">${actions}${deleteBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function approveUser(id) {
+  await _sb.from('users_profile').update({ status: 'approved' }).eq('id', id);
+  loadUsersFromSupabase();
+}
+async function rejectUser(id) {
+  await _sb.from('users_profile').update({ status: 'rejected' }).eq('id', id);
+  loadUsersFromSupabase();
+}
+async function deleteUserSb(id) {
+  if (!confirm('이 사용자를 삭제하시겠습니까?')) return;
+  await _sb.from('users_profile').delete().eq('id', id);
+  loadUsersFromSupabase();
+}
+
 function recToDb(r) {
   return {
     id: r.id,
@@ -1902,11 +2113,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Paste images
   document.addEventListener('paste', handlePaste);
 
-  // Supabase에서 데이터 로드 후 렌더
-  await sbLoad();
-  renderAll();
-  // IDB 유무와 관계없이 항상 Supabase 최신 BOM으로 갱신
-  sbLoadBom();
+  // 세션 체크 후 데이터 로드
+  const authed = await authInit();
+  if (authed) {
+    await sbLoad();
+    renderAll();
+    sbLoadBom();
+  }
 });
 
 // ═══════════════════════════════════════
@@ -1976,6 +2189,7 @@ function showTab(name) {
   if (name === 'model') renderModelView();
   if (name === 'customer') renderCustomerView();
   if (name === 'reportstd') renderReportStdView();
+  if (name === 'users') loadUsersFromSupabase();
 }
 
 function toggleSidebar() {
@@ -4427,6 +4641,47 @@ function ctxDeleteCol() {
   [..._ctxTable.querySelectorAll('tbody tr')].forEach(tr => tr.children[ci]?.remove());
 }
 </script>
+
+<!-- Auth Overlay -->
+<div id="authOverlay" class="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-title">
+      <div class="t1">🔄 4M 변동점 관리</div>
+      <div class="t2">신성오토텍(주)</div>
+    </div>
+    <div id="authLoginForm">
+      <label class="auth-label">이메일</label>
+      <input id="authEmail" type="email" class="auth-input" placeholder="이메일 주소 입력">
+      <label class="auth-label">비밀번호</label>
+      <input id="authPassword" type="password" class="auth-input" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')authLogin()">
+      <div style="display:flex;align-items:center;gap:7px;margin-top:10px">
+        <input type="checkbox" id="authRemember" style="width:15px;height:15px;cursor:pointer">
+        <label for="authRemember" style="font-size:12px;color:#555;cursor:pointer">이메일 저장</label>
+      </div>
+      <div id="authError" style="color:#e74c3c;font-size:12px;margin-top:8px;display:none"></div>
+      <button class="auth-btn" onclick="authLogin()">로그인</button>
+      <div class="auth-link" onclick="authShowSignup()">회원가입 신청</div>
+    </div>
+    <div id="authSignupForm" style="display:none">
+      <label class="auth-label">부서</label>
+      <select id="suDept" class="auth-input" style="padding:10px 13px">
+        <option value="">부서 선택</option>
+        <option>영업팀</option><option>경영지원팀</option><option>구매팀</option>
+        <option>개발팀</option><option>품질팀</option><option>생산관리팀</option>
+        <option>사출팀</option><option>도장팀</option><option>조립팀</option>
+      </select>
+      <label class="auth-label">이름</label>
+      <input id="suName" type="text" class="auth-input" placeholder="이름 입력">
+      <label class="auth-label">이메일</label>
+      <input id="suEmail" type="email" class="auth-input" placeholder="이메일 주소 입력">
+      <label class="auth-label">비밀번호 (6자 이상)</label>
+      <input id="suPassword" type="password" class="auth-input" placeholder="비밀번호 입력">
+      <div id="suError" class="auth-err"></div>
+      <button class="auth-btn" onclick="authSignup()">가입 신청</button>
+      <div class="auth-link" onclick="authShowLogin()">로그인으로 돌아가기</div>
+    </div>
+  </div>
+</div>
 
 <!-- 우클릭 컨텍스트 메뉴 -->
 <div id="verifyCtxMenu">
