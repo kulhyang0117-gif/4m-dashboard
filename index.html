@@ -1793,22 +1793,27 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ═══════════════════════════════════════
-//  AUTH
+//  AUTH (독립 인증 - Supabase Auth 미사용)
 // ═══════════════════════════════════════
 let _currentUser = null;
 
+async function _hashPw(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
 async function authInit() {
-  const { data: { session } } = await _sb.auth.getSession();
-  if (session) {
-    const { data: profile } = await _sb.from('users_profile').select('*').eq('id', session.user.id).maybeSingle();
-    if (profile && profile.status === 'approved') {
-      _currentUser = profile;
+  const saved = sessionStorage.getItem('4m_user');
+  if (saved) {
+    try {
+      _currentUser = JSON.parse(saved);
       document.getElementById('authOverlay').style.display = 'none';
       _updateAuthBar();
       return true;
-    }
-    await _sb.auth.signOut();
+    } catch(e) { sessionStorage.removeItem('4m_user'); }
   }
+  const savedEmail = localStorage.getItem('4m_remember_email') || '';
+  if (savedEmail) document.getElementById('authEmail').value = savedEmail;
   document.getElementById('authOverlay').style.display = 'flex';
   return false;
 }
@@ -1823,13 +1828,21 @@ async function authLogin() {
   if (remember) { localStorage.setItem('4m_remember_email', email); }
   else { localStorage.removeItem('4m_remember_email'); }
   showErr('확인 중...');
-  const { data, error } = await _sb.auth.signInWithPassword({ email, password: pw });
-  if (error) { showErr('이메일 또는 비밀번호가 올바르지 않습니다.'); return; }
-  const { data: profile, error: pErr } = await _sb.from('users_profile').select('*').eq('email', data.user.email).maybeSingle();
-  if (pErr || !profile) { showErr('프로필 오류: ' + (pErr ? pErr.message : 'profile null, email=' + data.user.email)); await _sb.auth.signOut(); return; }
-  if (profile.status === 'pending') { showErr('승인 대기 중입니다. 관리자 승인 후 로그인 가능합니다.'); await _sb.auth.signOut(); return; }
-  if (profile.status === 'rejected') { showErr('가입이 거절되었습니다.'); await _sb.auth.signOut(); return; }
-  _currentUser = profile;
+  const { data: profile, error } = await _sb.from('users_profile').select('*').eq('email', email).maybeSingle();
+  if (error || !profile) { showErr('이메일 또는 비밀번호가 올바르지 않습니다.'); return; }
+  if (profile.status === 'pending') { showErr('승인 대기 중입니다. 관리자 승인 후 로그인 가능합니다.'); return; }
+  if (profile.status === 'rejected') { showErr('가입이 거절되었습니다.'); return; }
+  // password_hash가 없는 기존 계정(최초 1회) - 비밀번호 설정
+  if (!profile.password_hash) {
+    const pwHash = await _hashPw(pw);
+    await _sb.from('users_profile').update({ password_hash: pwHash }).eq('email', email);
+    _currentUser = { ...profile, password_hash: pwHash };
+  } else {
+    const pwHash = await _hashPw(pw);
+    if (profile.password_hash !== pwHash) { showErr('이메일 또는 비밀번호가 올바르지 않습니다.'); return; }
+    _currentUser = profile;
+  }
+  sessionStorage.setItem('4m_user', JSON.stringify(_currentUser));
   document.getElementById('authOverlay').style.display = 'none';
   errEl.style.display = 'none';
   _updateAuthBar();
@@ -1847,27 +1860,16 @@ async function authSignup() {
   if (!dept || !name || !email || !pw) { errEl.textContent = '모든 항목을 입력하세요.'; errEl.style.display = 'block'; return; }
   if (pw.length < 6) { errEl.textContent = '비밀번호는 6자 이상이어야 합니다.'; errEl.style.display = 'block'; return; }
   errEl.textContent = '처리 중...'; errEl.style.display = 'block';
-  let userId = null;
-  const { data, error } = await _sb.auth.signUp({ email, password: pw, options: { data: { name, dept } } });
-  if (error && error.message.toLowerCase().includes('already')) {
-    // 다른 시스템에서 이미 가입된 계정 → 로그인으로 사용자 ID 확보
-    errEl.textContent = '계정 확인 중...'; errEl.style.display = 'block';
-    const { data: loginData, error: loginErr } = await _sb.auth.signInWithPassword({ email, password: pw });
-    if (loginErr) { errEl.textContent = '이미 가입된 이메일입니다. 동일한 비밀번호로 입력해 주세요.'; errEl.style.display = 'block'; return; }
-    userId = loginData.user.id;
-    await _sb.auth.signOut();
-  } else if (error) {
-    errEl.textContent = '오류: ' + error.message; errEl.style.display = 'block'; return;
-  } else if (!data.user) {
-    errEl.textContent = '오류가 발생했습니다. 다시 시도해 주세요.'; errEl.style.display = 'block'; return;
-  } else {
-    userId = data.user.id;
+  // 이메일 중복 체크
+  const { data: existing } = await _sb.from('users_profile').select('status').eq('email', email).maybeSingle();
+  if (existing) {
+    const msg = existing.status === 'pending' ? '승인 대기중' : existing.status === 'approved' ? '이미 승인된 계정' : '거절된 계정';
+    errEl.textContent = '이미 가입 신청된 이메일입니다. (' + msg + ')'; errEl.style.display = 'block'; return;
   }
-  // 이미 이 시스템에 프로필이 있는지 확인
-  const { data: existing } = await _sb.from('users_profile').select('status').eq('id', userId).maybeSingle();
-  if (existing) { errEl.textContent = '이미 가입 신청된 계정입니다. (상태: ' + (existing.status === 'pending' ? '승인 대기중' : existing.status === 'approved' ? '승인됨' : '거절됨') + ')'; errEl.style.display = 'block'; return; }
-  const { error: pErr } = await _sb.from('users_profile').upsert({ id: userId, email, name, dept, role: 'user', position: '팀원', status: 'pending', created_at: new Date().toISOString() });
-  if (pErr) { errEl.textContent = '프로필 저장 오류: ' + pErr.message; errEl.style.display = 'block'; return; }
+  const pwHash = await _hashPw(pw);
+  const id = crypto.randomUUID();
+  const { error } = await _sb.from('users_profile').insert({ id, email, name, dept, role: 'user', position: '팀원', status: 'pending', password_hash: pwHash, created_at: new Date().toISOString() });
+  if (error) { errEl.textContent = '오류: ' + error.message; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
   alert('가입 신청이 완료되었습니다.\n관리자 승인 후 로그인하실 수 있습니다.');
   authShowLogin();
@@ -1875,8 +1877,8 @@ async function authSignup() {
 
 async function authLogout() {
   if (!confirm('로그아웃 하시겠습니까?')) return;
-  await _sb.auth.signOut();
   _currentUser = null;
+  sessionStorage.removeItem('4m_user');
   document.getElementById('authEmail').value = '';
   document.getElementById('authPassword').value = '';
   document.getElementById('authError').style.display = 'none';
