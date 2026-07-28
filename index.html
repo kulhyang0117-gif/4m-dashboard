@@ -1847,10 +1847,26 @@ async function authSignup() {
   if (!dept || !name || !email || !pw) { errEl.textContent = '모든 항목을 입력하세요.'; errEl.style.display = 'block'; return; }
   if (pw.length < 6) { errEl.textContent = '비밀번호는 6자 이상이어야 합니다.'; errEl.style.display = 'block'; return; }
   errEl.textContent = '처리 중...'; errEl.style.display = 'block';
+  let userId = null;
   const { data, error } = await _sb.auth.signUp({ email, password: pw, options: { data: { name, dept } } });
-  if (error) { errEl.textContent = error.message.toLowerCase().includes('already') ? '이미 가입된 이메일입니다.' : '오류: ' + error.message; errEl.style.display = 'block'; return; }
-  if (!data.user) { errEl.textContent = '이미 가입된 이메일이거나 오류가 발생했습니다.'; errEl.style.display = 'block'; return; }
-  const { error: pErr } = await _sb.from('users_profile').upsert({ id: data.user.id, email, name, dept, role: 'user', position: '팀원', status: 'pending', created_at: new Date().toISOString() });
+  if (error && error.message.toLowerCase().includes('already')) {
+    // 다른 시스템에서 이미 가입된 계정 → 로그인으로 사용자 ID 확보
+    errEl.textContent = '계정 확인 중...'; errEl.style.display = 'block';
+    const { data: loginData, error: loginErr } = await _sb.auth.signInWithPassword({ email, password: pw });
+    if (loginErr) { errEl.textContent = '이미 가입된 이메일입니다. 동일한 비밀번호로 입력해 주세요.'; errEl.style.display = 'block'; return; }
+    userId = loginData.user.id;
+    await _sb.auth.signOut();
+  } else if (error) {
+    errEl.textContent = '오류: ' + error.message; errEl.style.display = 'block'; return;
+  } else if (!data.user) {
+    errEl.textContent = '오류가 발생했습니다. 다시 시도해 주세요.'; errEl.style.display = 'block'; return;
+  } else {
+    userId = data.user.id;
+  }
+  // 이미 이 시스템에 프로필이 있는지 확인
+  const { data: existing } = await _sb.from('users_profile').select('status').eq('id', userId).maybeSingle();
+  if (existing) { errEl.textContent = '이미 가입 신청된 계정입니다. (상태: ' + (existing.status === 'pending' ? '승인 대기중' : existing.status === 'approved' ? '승인됨' : '거절됨') + ')'; errEl.style.display = 'block'; return; }
+  const { error: pErr } = await _sb.from('users_profile').upsert({ id: userId, email, name, dept, role: 'user', position: '팀원', status: 'pending', created_at: new Date().toISOString() });
   if (pErr) { errEl.textContent = '프로필 저장 오류: ' + pErr.message; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
   alert('가입 신청이 완료되었습니다.\n관리자 승인 후 로그인하실 수 있습니다.');
