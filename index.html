@@ -1897,18 +1897,50 @@ function authShowSignup() {
   document.getElementById('authSignupForm').style.display = '';
   document.getElementById('suError').style.display = 'none';
 }
+function _showToast(msg, color) {
+  let t = document.getElementById('_adminToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_adminToast';
+    t.style.cssText = 'position:fixed;bottom:28px;right:28px;z-index:99999;background:#0d2b5e;color:#fff;padding:14px 20px;border-radius:10px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.3);display:none;max-width:300px;line-height:1.5;';
+    document.body.appendChild(t);
+  }
+  if (color) t.style.background = color;
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.display = 'none'; }, 5000);
+}
+
+let _realtimeSub = null;
+function _subscribeSignupAlerts() {
+  if (_realtimeSub) return;
+  _realtimeSub = _sb.channel('signup-alerts')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'users_profile', filter: 'system=eq.4m' }, payload => {
+      const u = payload.new;
+      if (u && u.status === 'pending') {
+        _showToast('🔔 새 가입 신청\n' + (u.name || '') + ' (' + (u.dept || '') + ')\n' + (u.email || ''));
+        // 뱃지 업데이트
+        const badge = document.getElementById('badge-users');
+        if (badge) { badge.textContent = parseInt(badge.textContent || '0') + 1; badge.style.display = ''; }
+      }
+    })
+    .subscribe();
+}
+
 function _updateAuthBar() {
   const bar = document.getElementById('authUserBar');
   if (bar && _currentUser) {
     bar.style.display = 'flex';
     document.getElementById('authUserName').textContent = (_currentUser.name || '') + ' (' + (_currentUser.dept || '') + ')';
   }
-  // 관리자만 회원관리 메뉴 표시
+  // 관리자만 회원관리 메뉴 표시 및 실시간 알림 구독
   const isAdmin = _currentUser && _currentUser.role === 'admin';
   const navUsers = document.getElementById('nav-users');
   const mnavUsers = document.getElementById('mnav-users');
   if (navUsers) navUsers.style.display = isAdmin ? '' : 'none';
   if (mnavUsers) mnavUsers.style.display = isAdmin ? '' : 'none';
+  if (isAdmin) _subscribeSignupAlerts();
 }
 
 async function loadUsersFromSupabase() {
