@@ -1828,14 +1828,14 @@ async function authLogin() {
   if (remember) { localStorage.setItem('4m_remember_email', email); }
   else { localStorage.removeItem('4m_remember_email'); }
   showErr('확인 중...');
-  const { data: profile, error } = await _sb.from('users_profile').select('*').eq('email', email).maybeSingle();
+  const { data: profile, error } = await _sb.from('users_profile').select('*').eq('email', email).eq('system', '4m').maybeSingle();
   if (error || !profile) { showErr('이메일 또는 비밀번호가 올바르지 않습니다.'); return; }
   if (profile.status === 'pending') { showErr('승인 대기 중입니다. 관리자 승인 후 로그인 가능합니다.'); return; }
   if (profile.status === 'rejected') { showErr('가입이 거절되었습니다.'); return; }
   // password_hash가 없는 기존 계정(최초 1회) - 비밀번호 설정
   if (!profile.password_hash) {
     const pwHash = await _hashPw(pw);
-    await _sb.from('users_profile').update({ password_hash: pwHash }).eq('email', email);
+    await _sb.from('users_profile').update({ password_hash: pwHash }).eq('email', email).eq('system', '4m');
     _currentUser = { ...profile, password_hash: pwHash };
   } else {
     const pwHash = await _hashPw(pw);
@@ -1860,15 +1860,15 @@ async function authSignup() {
   if (!dept || !name || !email || !pw) { errEl.textContent = '모든 항목을 입력하세요.'; errEl.style.display = 'block'; return; }
   if (pw.length < 6) { errEl.textContent = '비밀번호는 6자 이상이어야 합니다.'; errEl.style.display = 'block'; return; }
   errEl.textContent = '처리 중...'; errEl.style.display = 'block';
-  // 이메일 중복 체크
-  const { data: existing } = await _sb.from('users_profile').select('status').eq('email', email).maybeSingle();
+  // 이 시스템(4m) 내 이메일 중복 체크
+  const { data: existing } = await _sb.from('users_profile').select('status').eq('email', email).eq('system', '4m').maybeSingle();
   if (existing) {
     const msg = existing.status === 'pending' ? '승인 대기중' : existing.status === 'approved' ? '이미 승인된 계정' : '거절된 계정';
     errEl.textContent = '이미 가입 신청된 이메일입니다. (' + msg + ')'; errEl.style.display = 'block'; return;
   }
   const pwHash = await _hashPw(pw);
   const id = crypto.randomUUID();
-  const { error } = await _sb.from('users_profile').insert({ id, email, name, dept, role: 'user', position: '팀원', status: 'pending', password_hash: pwHash, created_at: new Date().toISOString() });
+  const { error } = await _sb.from('users_profile').insert({ id, email, name, dept, role: 'user', position: '팀원', status: 'pending', password_hash: pwHash, system: '4m', created_at: new Date().toISOString() });
   if (error) { errEl.textContent = '오류: ' + error.message; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
   alert('가입 신청이 완료되었습니다.\n관리자 승인 후 로그인하실 수 있습니다.');
@@ -1915,7 +1915,7 @@ async function loadUsersFromSupabase() {
   const tbody = document.getElementById('users-tbody');
   if (!tbody) return;
   tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#888;">불러오는 중...</td></tr>';
-  const { data: users, error } = await _sb.from('users_profile').select('*').order('created_at', { ascending: false });
+  const { data: users, error } = await _sb.from('users_profile').select('*').eq('system', '4m').order('created_at', { ascending: false });
   if (error) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#e74c3c;">오류: ' + error.message + '</td></tr>'; return; }
   const ADMIN_EMAIL = 'kulhyang0117@gmail.com';
   const others = (users || []).filter(u => u.email !== ADMIN_EMAIL);
