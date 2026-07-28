@@ -1923,20 +1923,27 @@ async function loadUsersFromSupabase() {
   const badge = document.getElementById('badge-users');
   if (badge) { badge.textContent = pendingCount; badge.style.display = pendingCount > 0 ? '' : 'none'; }
   if (!others.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#888;">등록된 회원이 없습니다.</td></tr>'; return; }
+  const positions = ['대표이사','부사장','공장장','실장','팀장','팀원'];
+  const selStyle = 'font-size:11px;border:1px solid #ddd;border-radius:4px;padding:3px 4px;cursor:pointer;';
   tbody.innerHTML = others.map(u => {
     const statusColor = u.status === 'approved' ? '#28a745' : u.status === 'rejected' ? '#e74c3c' : '#f39c12';
     const statusText = u.status === 'approved' ? '승인됨' : u.status === 'rejected' ? '거절됨' : '대기중';
-    const roleText = u.role === 'admin' ? '<span style="font-size:11px;font-weight:700;color:#e65100;">관리자</span>' : '일반';
+    const posOpts = positions.map(p => `<option value="${p}" ${u.position===p?'selected':''}>${p}</option>`).join('');
+    const posSelect = `<select style="${selStyle}" onchange="updateUserField('${u.id}','position',this.value)">${posOpts}</select>`;
+    const roleSelect = `<select style="${selStyle}" onchange="updateUserField('${u.id}','role',this.value)">
+      <option value="user" ${u.role!=='admin'?'selected':''}>일반</option>
+      <option value="admin" ${u.role==='admin'?'selected':''}>관리자</option>
+    </select>`;
     const actions = u.status === 'pending'
       ? `<button onclick="approveUser('${u.id}')" style="background:#28a745;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">승인</button><button onclick="rejectUser('${u.id}')" style="background:#e74c3c;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">거절</button>`
       : '';
     const deleteBtn = `<button onclick="deleteUserSb('${u.id}')" style="background:#888;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;margin-left:4px;">삭제</button>`;
     return `<tr style="border-bottom:1px solid #eee;">
       <td style="padding:8px 10px;text-align:center;">${u.dept || '-'}</td>
-      <td style="padding:8px 10px;text-align:center;">${u.position || '-'}</td>
+      <td style="padding:8px 10px;text-align:center;">${posSelect}</td>
       <td style="padding:8px 10px;text-align:center;font-weight:700;">${u.name || '-'}</td>
       <td style="padding:8px 10px;text-align:center;">${u.email || ''}</td>
-      <td style="padding:8px 10px;text-align:center;">${roleText}</td>
+      <td style="padding:8px 10px;text-align:center;">${roleSelect}</td>
       <td style="padding:8px 10px;text-align:center;color:${statusColor};font-weight:700;">${statusText}</td>
       <td style="padding:8px 10px;text-align:center;font-size:11px;color:#aaa;">${(u.created_at || '').substring(0, 10)}</td>
       <td style="padding:8px 10px;text-align:center;">${actions}${deleteBtn}</td>
@@ -1944,6 +1951,9 @@ async function loadUsersFromSupabase() {
   }).join('');
 }
 
+async function updateUserField(id, field, value) {
+  await _sb.from('users_profile').update({ [field]: value }).eq('id', id);
+}
 async function approveUser(id) {
   await _sb.from('users_profile').update({ status: 'approved' }).eq('id', id);
   loadUsersFromSupabase();
