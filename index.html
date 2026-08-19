@@ -1008,7 +1008,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
           <thead>
             <tr>
               <th>No</th><th>등록일</th><th>부서</th><th>4M 유형</th><th>신고/처리기준</th><th>품종</th><th>부품명</th><th>고객사</th>
-              <th>변경전 내용</th><th>변경후 내용</th><th>조치시점</th><th>검증내용</th><th>상태</th><th>결재</th><th>관리</th>
+              <th>변경전 내용</th><th>변경후 내용</th><th>조치시점</th><th>검증내용</th><th>품질검증</th><th>상태</th><th>결재</th><th>관리</th>
             </tr>
           </thead>
           <tbody id="overviewTbody"></tbody>
@@ -1060,7 +1060,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
           <thead>
             <tr>
               <th>No</th><th>등록일</th><th>부서</th><th>4M 유형</th><th>신고/처리기준</th><th>품종명</th><th>부품코드</th><th>부품명</th><th>고객사</th>
-              <th>변경전 내용</th><th>변경후 내용</th><th>조치시점</th><th>검증내용</th><th>상태</th><th>비고</th><th>결재</th><th>관리</th>
+              <th>변경전 내용</th><th>변경후 내용</th><th>조치시점</th><th>검증내용</th><th>품질검증</th><th>상태</th><th>비고</th><th>결재</th><th>관리</th>
             </tr>
           </thead>
           <tbody id="historyTbody"></tbody>
@@ -3633,7 +3633,7 @@ function renderOverview() {
   const recent = records.slice(0,10);
   const tbody = document.getElementById('overviewTbody');
   if (recent.length === 0) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="16">등록된 변동점이 없습니다. [+ 변동점 등록] 버튼을 클릭하여 등록하세요.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="18">등록된 변동점이 없습니다. [+ 변동점 등록] 버튼을 클릭하여 등록하세요.</td></tr>';
     return;
   }
   tbody.innerHTML = recent.map((r,i) => `
@@ -3650,6 +3650,7 @@ function renderOverview() {
       <td class="td-wrap">${esc(r.after)}${r.photosAfter?.length?`<div style="margin-top:4px">${photoThumb(r,'after')}</div>`:''}</td>
       <td style="font-size:11px;white-space:nowrap">${r.actionDate||'-'}</td>
       <td style="font-size:11px">${verifyBadge(r.verificationData)}</td>
+      <td style="font-size:11px;text-align:center;font-weight:700;color:${r.qualityCheck==='OK'?'#10b981':r.qualityCheck==='NG'?'#ef4444':'#64748b'}">${r.qualityCheck||'-'}</td>
       <td>${signalBadge(r.status)}</td>
       <td onclick="event.stopPropagation()" style="min-width:90px">${renderApprovalCell(r)}</td>
       <td style="white-space:nowrap" onclick="event.stopPropagation()">
@@ -3679,8 +3680,8 @@ function renderHistory() {
 
   const tbody = document.getElementById('historyTbody');
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="17">조건에 맞는 이력이 없습니다.</td></tr>';
-    document.getElementById('historyFoot').innerHTML = '<td colspan="17">합계: 0건</td>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="18">조건에 맞는 이력이 없습니다.</td></tr>';
+    document.getElementById('historyFoot').innerHTML = '<td colspan="18">합계: 0건</td>';
     return;
   }
 
@@ -3699,6 +3700,7 @@ function renderHistory() {
       <td class="td-wrap">${esc(r.after)}${r.photosAfter?.length?`<div style="margin-top:4px">${photoThumb(r,'after')}</div>`:''}</td>
       <td style="font-size:11px;white-space:nowrap">${r.actionDate||'-'}</td>
       <td style="font-size:11px">${verifyBadge(r.verificationData)}</td>
+      <td style="font-size:11px;text-align:center;font-weight:700;color:${r.qualityCheck==='OK'?'#10b981':r.qualityCheck==='NG'?'#ef4444':'#64748b'}">${r.qualityCheck||'-'}</td>
       <td>${signalBadge(r.status)}</td>
       <td class="td-wrap" style="max-width:120px">${esc(r.note||'-')}</td>
       <td onclick="event.stopPropagation()" style="min-width:90px">${renderApprovalCell(r)}</td>
@@ -3711,7 +3713,7 @@ function renderHistory() {
   `).join('');
 
   document.getElementById('historyFoot').innerHTML =
-    `<td colspan="17">합계: ${filtered.length}건 &nbsp;|&nbsp; 완료: ${filtered.filter(r=>r.status==='완료').length}건 &nbsp;|&nbsp; 완료율: ${filtered.length?Math.round(filtered.filter(r=>r.status==='완료').length/filtered.length*100):0}%</td>`;
+    `<td colspan="18">합계: ${filtered.length}건 &nbsp;|&nbsp; 완료: ${filtered.filter(r=>r.status==='완료').length}건 &nbsp;|&nbsp; 완료율: ${filtered.length?Math.round(filtered.filter(r=>r.status==='완료').length/filtered.length*100):0}%</td>`;
 }
 
 // ═══════════════════════════════════════
