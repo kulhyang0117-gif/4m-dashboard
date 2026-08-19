@@ -188,6 +188,8 @@ kbd{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:3px;padding:1px 5p
 .verify-photo-thumb{position:relative;width:68px;height:68px;border-radius:6px;overflow:hidden;border:1px solid #e2e8f0;cursor:pointer}
 .verify-photo-thumb img{width:100%;height:100%;object-fit:cover}
 .verify-photo-remove{position:absolute;top:2px;right:2px;background:rgba(198,40,40,.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center}
+.verify-photo-rotate{position:absolute;top:2px;left:2px;background:rgba(30,87,153,.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;transition:transform .25s}
+.verify-photo-rotate:hover{transform:rotate(90deg)}
 /* ── MODAL ── */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center}
 .modal-overlay.open{display:flex}
@@ -3424,10 +3426,10 @@ function renderChangelog() {
     <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
       <table style="width:100%;border-collapse:collapse">
         <thead><tr style="background:#1a3c6e;color:#fff">
-          <th style="padding:9px 10px;text-align:left;font-size:12px;font-weight:700;white-space:nowrap">커밋</th>
-          <th style="padding:9px 10px;text-align:left;font-size:12px;font-weight:700;white-space:nowrap">날짜</th>
-          <th style="padding:9px 10px;text-align:left;font-size:12px;font-weight:700">구분</th>
-          <th style="padding:9px 10px;text-align:left;font-size:12px;font-weight:700">변경 내용</th>
+          <th style="padding:9px 10px;text-align:center;font-size:12px;font-weight:700;white-space:nowrap">커밋</th>
+          <th style="padding:9px 10px;text-align:center;font-size:12px;font-weight:700;white-space:nowrap">날짜</th>
+          <th style="padding:9px 10px;text-align:center;font-size:12px;font-weight:700">구분</th>
+          <th style="padding:9px 10px;text-align:center;font-size:12px;font-weight:700">변경 내용</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -4850,6 +4852,24 @@ function removeVerifyPhoto(type, idx) {
   if (_verifyPhotos[type]) { _verifyPhotos[type].splice(idx, 1); renderVerifyPhotoGrid(type); }
 }
 
+function rotateVerifyPhoto(type, idx) {
+  const src = (_verifyPhotos[type] || [])[idx];
+  if (!src) return;
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width  = img.height;
+    canvas.height = img.width;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    _verifyPhotos[type][idx] = canvas.toDataURL('image/jpeg', 0.92);
+    renderVerifyPhotoGrid(type);
+  };
+  img.src = src;
+}
+
 function renderVerifyPhotoGrid(type) {
   const grid = document.getElementById(`verifyPhotoGrid_${type}`);
   if (!grid) return;
@@ -4857,6 +4877,7 @@ function renderVerifyPhotoGrid(type) {
   grid.innerHTML = photos.map((src, i) => `
     <div class="verify-photo-thumb">
       <img src="${src}" onclick="openVerifyPhotoPreview('${type}',${i})">
+      <button type="button" class="verify-photo-rotate" title="90° 회전" onclick="rotateVerifyPhoto('${type}',${i})">↻</button>
       <button type="button" class="verify-photo-remove" onclick="removeVerifyPhoto('${type}',${i})">✕</button>
     </div>`).join('');
 }
