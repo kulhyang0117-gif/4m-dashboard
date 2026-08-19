@@ -317,6 +317,8 @@ textarea.form-control{min-height:70px;resize:vertical}
 .multi-thumb img{width:100%;height:100%;object-fit:cover;border-radius:5px;cursor:zoom-in;border:1px solid #ddd;transition:transform .15s}
 .multi-thumb img:hover{transform:scale(1.05)}
 .multi-thumb .mth-del{position:absolute;top:-5px;right:-5px;background:rgba(198,40,40,.9);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0;display:flex;align-items:center;justify-content:center}
+.multi-thumb .mth-rot{position:absolute;top:-5px;left:-5px;background:rgba(30,87,153,.9);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:11px;line-height:18px;text-align:center;padding:0;display:flex;align-items:center;justify-content:center;transition:transform .25s}
+.multi-thumb .mth-rot:hover{transform:rotate(90deg)}
 .add-photo-lbl{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#f0f5ff;border:1.5px dashed #1e5799;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;color:#1e5799;transition:all .15s}
 .add-photo-lbl:hover{background:#e3f2fd;border-color:#1565c0}
 /* ── PHOTO VIEWER NAV ── */
@@ -2792,6 +2794,24 @@ function removePhoto(type, idx) {
   renderPhotoGrid(type);
 }
 
+function rotatePhoto(type, idx) {
+  const arr = type === 'before' ? photosBefore : photosAfter;
+  const src = arr[idx];
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width  = img.height;
+    canvas.height = img.width;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    arr[idx] = canvas.toDataURL('image/jpeg', 0.92);
+    renderPhotoGrid(type);
+  };
+  img.src = src;
+}
+
 function renderPhotoGrid(type) {
   const arr  = type === 'before' ? photosBefore : photosAfter;
   const grid = document.getElementById(type === 'before' ? 'photoGridBefore' : 'photoGridAfter');
@@ -2799,6 +2819,7 @@ function renderPhotoGrid(type) {
   grid.innerHTML = arr.map((src, i) => `
     <div class="multi-thumb">
       <img src="${src}" onclick="event.stopPropagation();openPhotoViewerArr(${JSON.stringify(arr)},${i})" title="클릭하여 크게 보기">
+      <button class="mth-rot" title="90° 회전" onclick="event.stopPropagation();rotatePhoto('${type}',${i})">↻</button>
       <button class="mth-del" onclick="event.stopPropagation();removePhoto('${type}',${i})">✕</button>
     </div>
   `).join('');
