@@ -91,9 +91,9 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#ee
 .filter-row select:focus,.filter-row input:focus{outline:none;border-color:#1e5799}
 
 /* ── TABLE ── */
-.tbl-wrap{overflow-x:auto;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.tbl-wrap{overflow:auto;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08);max-height:calc(100vh - 220px)}
 table{border-collapse:collapse;width:100%;min-width:1100px}
-thead th{background:#0d2b5e;color:#fff;padding:10px 10px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center}
+thead th{background:#0d2b5e;color:#fff;padding:10px 10px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center;position:sticky;top:0;z-index:2}
 tbody td{padding:8px 10px;font-size:12px;border-bottom:1px solid #e8eef8;vertical-align:middle;text-align:center}
 tbody tr:hover{background:#e8f0ff}
 tbody tr[onclick]:hover{background:#dbeafe}
@@ -1007,7 +1007,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
         <table>
           <thead>
             <tr>
-              <th>No</th><th>등록일</th><th>부서</th><th>4M 유형</th><th>품종</th><th>부품명</th><th>고객사</th>
+              <th>No</th><th>등록일</th><th>부서</th><th>4M 유형</th><th>신고/처리기준</th><th>품종</th><th>부품명</th><th>고객사</th>
               <th>변경전 내용</th><th>변경후 내용</th><th>조치시점</th><th>검증내용</th><th>상태</th><th>결재</th><th>관리</th>
             </tr>
           </thead>
@@ -3633,7 +3633,7 @@ function renderOverview() {
   const recent = records.slice(0,10);
   const tbody = document.getElementById('overviewTbody');
   if (recent.length === 0) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="15">등록된 변동점이 없습니다. [+ 변동점 등록] 버튼을 클릭하여 등록하세요.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="16">등록된 변동점이 없습니다. [+ 변동점 등록] 버튼을 클릭하여 등록하세요.</td></tr>';
     return;
   }
   tbody.innerHTML = recent.map((r,i) => `
@@ -3642,6 +3642,7 @@ function renderOverview() {
       <td>${r.date}</td>
       <td style="font-size:11px;font-weight:700">${r.dept||'-'}</td>
       <td>${badge4m(r.type4m)}</td>
+      <td style="font-size:11px;white-space:nowrap">${esc(_rvGetLevel(r)||'-')}</td>
       <td style="font-size:11px">${r.modelName||r.modelCode||'-'}</td>
       <td style="font-size:11px">${r.partName||'-'}</td>
       <td style="font-size:11px">${r.customer||'-'}</td>
