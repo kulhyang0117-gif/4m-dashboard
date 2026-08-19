@@ -507,6 +507,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
     <button class="m-nav-item2" id="mnav-reportstd" onclick="showTab('reportstd');closeDrawer()"><span class="mni">📑</span>신고기준별</button>
     <button class="m-nav-item2" id="mnav-upload"    onclick="showTab('upload');closeDrawer()"><span class="mni">📂</span>업로드</button>
     <button class="m-nav-item2" id="mnav-guide"    onclick="showTab('guide');closeDrawer()"><span class="mni">📖</span>가이드</button>
+    <button class="m-nav-item2" id="mnav-changelog" onclick="showTab('changelog');closeDrawer()"><span class="mni">🕓</span>이력관리</button>
     <button class="m-nav-item2" id="mnav-users"   onclick="showTab('users');closeDrawer()" style="display:none"><span class="mni">👥</span>회원관리</button>
   </div>
 </nav>
@@ -539,6 +540,9 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
     </button>
     <button class="nav-btn" onclick="showTab('guide')" id="nav-guide">
       <span class="nav-icon">📖</span><span class="nav-txt">이용 가이드</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('changelog')" id="nav-changelog">
+      <span class="nav-icon">🕓</span><span class="nav-txt">이력관리</span>
     </button>
     <button class="nav-btn" onclick="showTab('users')" id="nav-users" style="display:none">
       <span class="nav-icon">👥</span><span class="nav-txt">회원관리 <span id="badge-users" style="display:none;background:#e74c3c;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:2px">0</span></span>
@@ -1299,7 +1303,31 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
           </div>
         </div>
 
-        <!-- 5. FAQ -->
+        <!-- 5. 이력관리 -->
+        <div class="guide-card">
+          <div class="guide-card-header" onclick="toggleGuide(this)">
+            <span>🕓 &nbsp;이력관리 — 수정·등록 이력 확인</span><span class="guide-arrow">▾</span>
+          </div>
+          <div class="guide-card-body">
+            <p>변동점을 <strong>등록하거나 수정할 때마다</strong> 처리자·일시·구분(등록/수정)이 자동으로 기록됩니다.<br>기록은 현재 기기의 브라우저에 저장되며, <strong>이력 탭 → 상세보기(🔍)</strong>에서 언제든 확인할 수 있습니다.</p>
+            <div class="guide-step-list">
+              <div class="guide-step"><span class="guide-step-num">1</span><div><strong>이력 탭</strong>에서 확인하고 싶은 변동점 행을 클릭하거나 🔍 버튼을 누릅니다.</div></div>
+              <div class="guide-step"><span class="guide-step-num">2</span><div>상세보기 모달 하단의 <strong>🕓 수정 이력</strong> 섹션에서 등록·수정 내역을 확인합니다.</div></div>
+              <div class="guide-step"><span class="guide-step-num">3</span><div>가장 최근 이력이 위에 표시되며, <strong>일시 / 구분(등록·수정) / 처리자(부서)</strong> 정보가 나열됩니다.</div></div>
+            </div>
+            <table class="guide-table" style="margin-top:12px">
+              <thead><tr><th>컬럼</th><th>설명</th></tr></thead>
+              <tbody>
+                <tr><td>일시</td><td>저장 버튼을 누른 정확한 날짜·시간</td></tr>
+                <tr><td>구분</td><td><span style="background:#e8f5e9;color:#2e7d32;padding:1px 6px;border-radius:8px;font-size:11px;font-weight:700">등록</span> 최초 생성 &nbsp;/&nbsp; <span style="background:#fff3e0;color:#e65100;padding:1px 6px;border-radius:8px;font-size:11px;font-weight:700">수정</span> 이후 변경</td></tr>
+                <tr><td>처리자</td><td>저장 시 로그인된 사용자 이름 및 부서</td></tr>
+              </tbody>
+            </table>
+            <div class="guide-tip">💡 이력은 현재 브라우저에 저장됩니다. 다른 기기에서 수정한 경우 해당 기기의 이력은 그 기기에서 확인하세요.</div>
+          </div>
+        </div>
+
+        <!-- 6. FAQ -->
         <div class="guide-card">
           <div class="guide-card-header" onclick="toggleGuide(this)">
             <span>❓ &nbsp;자주 묻는 질문</span><span class="guide-arrow">▾</span>
@@ -1314,6 +1342,16 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
 
       </div>
     </div><!-- /tab-guide -->
+
+    <!-- ═══ TAB: 이력관리 ═══ -->
+    <div class="tab-panel" id="tab-changelog" style="display:none">
+      <div class="toolbar">
+        <div class="toolbar-title">대시보드 수정 이력</div>
+      </div>
+      <div style="padding:0 16px 16px">
+        <div id="changelogTableWrap"></div>
+      </div>
+    </div><!-- /tab-changelog -->
 
   </div><!-- /main -->
 </div><!-- /layout -->
@@ -2363,6 +2401,7 @@ function showTab(name) {
   if (name === 'customer') renderCustomerView();
   if (name === 'reportstd') renderReportStdView();
   if (name === 'users') loadUsersFromSupabase();
+  if (name === 'changelog') renderChangelog();
 }
 
 function toggleSidebar() {
@@ -3099,9 +3138,9 @@ function renderApprovalCell(r) {
   if (!al) return '<span style="font-size:10px;color:#cbd5e1">-</span>';
 
   const roles = [];
-  if (al.writer)    roles.push({ label: '작성', person: al.writer, type: 'writer' });
-  (al.reviewers || []).forEach((rv, i) => roles.push({ label: '검토'+(al.reviewers.length>1?(i+1):''), person: rv, type: 'reviewer', order: rv.order }));
-  if (al.approver)  roles.push({ label: '승인', person: al.approver, type: 'approver' });
+  if (al.writer)    roles.push({ label: al.writer.position || '작성', person: al.writer, type: 'writer' });
+  (al.reviewers || []).forEach((rv, i) => roles.push({ label: rv.position || ('검토'+(al.reviewers.length>1?(i+1):'')), person: rv, type: 'reviewer', order: rv.order }));
+  if (al.approver)  roles.push({ label: al.approver.position || '승인', person: al.approver, type: 'approver' });
 
   if (!roles.length) return '<span style="font-size:10px;color:#cbd5e1">-</span>';
 
@@ -3169,9 +3208,9 @@ async function doApproveRecord(recordId, type, order) {
 function renderApprovalInDetail(al) {
   if (!al) return '';
   const roles = [];
-  if (al.writer)    roles.push({ label: '작성', person: al.writer });
-  (al.reviewers || []).forEach((rv, i) => roles.push({ label: '검토'+(al.reviewers.length>1?(i+1):''), person: rv }));
-  if (al.approver)  roles.push({ label: '승인', person: al.approver });
+  if (al.writer)    roles.push({ label: al.writer.position || '작성', person: al.writer });
+  (al.reviewers || []).forEach((rv, i) => roles.push({ label: rv.position || ('검토'+(al.reviewers.length>1?(i+1):'')), person: rv }));
+  if (al.approver)  roles.push({ label: al.approver.position || '승인', person: al.approver });
   if (!roles.length) return '';
 
   const cells = roles.map((ro, idx) => {
@@ -3254,14 +3293,125 @@ function saveRecord() {
   }
 
   saveAttachmentsToIDB(rec.id, pendingAttachments);
+  const wasEditing = !!editingId;
   closeRegModal();
+  logEditHistory(rec.id, wasEditing ? '수정' : '등록');
   renderAll();
   sbUpsert(rec).then(ok => {
-    if (ok) showToast(editingId ? '✅ 변동점 수정 완료' : '✅ 변동점 등록 완료');
+    if (ok) showToast(wasEditing ? '✅ 변동점 수정 완료' : '✅ 변동점 등록 완료');
   });
 }
 
 function saveRecords() { /* Supabase로 대체됨 */ }
+
+// ── 수정 이력 로깅 (localStorage) ──
+function logEditHistory(recordId, action) {
+  const store = JSON.parse(localStorage.getItem('4m_edit_history') || '{}');
+  if (!store[recordId]) store[recordId] = [];
+  const rec = records.find(r => r.id === recordId);
+  store[recordId].push({
+    at: new Date().toISOString(),
+    by: _currentUser ? (_currentUser.name || _currentUser.email) : '알 수 없음',
+    dept: _currentUser?.dept || '',
+    action,
+    modelName: rec?.modelName || '',
+    partName: rec?.partName || '',
+    type4m: rec?.type4m || ''
+  });
+  localStorage.setItem('4m_edit_history', JSON.stringify(store));
+}
+
+function getEditHistory(recordId) {
+  const store = JSON.parse(localStorage.getItem('4m_edit_history') || '{}');
+  return store[recordId] || [];
+}
+
+function renderEditHistoryHtml(recordId) {
+  const logs = getEditHistory(recordId);
+  if (!logs.length) return '';
+  const rows = [...logs].reverse().map(l => {
+    const dt = new Date(l.at);
+    const dateStr = dt.toLocaleDateString('ko-KR', {year:'numeric',month:'2-digit',day:'2-digit'});
+    const timeStr = dt.toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'});
+    const badge = l.action === '등록'
+      ? `<span style="background:#e8f5e9;color:#2e7d32;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700">등록</span>`
+      : `<span style="background:#fff3e0;color:#e65100;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700">수정</span>`;
+    return `<tr>
+      <td style="padding:5px 8px;font-size:11px;white-space:nowrap">${dateStr} ${timeStr}</td>
+      <td style="padding:5px 8px;font-size:11px">${badge}</td>
+      <td style="padding:5px 8px;font-size:11px">${esc(l.by)}${l.dept ? ` <span style="color:#94a3b8">(${esc(l.dept)})</span>` : ''}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="section-title" style="margin-top:6px">🕓 수정 이력</div>
+    <div style="margin-bottom:14px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:#f8fafc">
+          <th style="padding:5px 8px;text-align:left;font-size:11px;color:#64748b;font-weight:700;border-bottom:1px solid #e2e8f0">일시</th>
+          <th style="padding:5px 8px;text-align:left;font-size:11px;color:#64748b;font-weight:700;border-bottom:1px solid #e2e8f0">구분</th>
+          <th style="padding:5px 8px;text-align:left;font-size:11px;color:#64748b;font-weight:700;border-bottom:1px solid #e2e8f0">처리자</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── 대시보드 수정 이력 (git 커밋 기반, 배포 시 자동 갱신) ──
+const DASHBOARD_CHANGELOG = [
+  { hash:'3e15713', date:'2026-08-19', type:'feat', msg:'결재라인 기능 및 비밀번호 변경 모달 추가', detail:'결재라인(작성/검토/승인) UI·CSS, 헤더 비밀번호 변경 버튼, 이력 탭 결재 컬럼·뱃지 추가' },
+  { hash:'8bb2824', date:'2026-07-28', type:'feat', msg:'가입 신청 시 관리자 실시간 토스트 알림 추가', detail:'신규 가입 신청 발생 시 관리자 계정에 실시간 토스트 알림 표시' },
+  { hash:'0fcc9b7', date:'2026-07-28', type:'feat', msg:'회원관리 직책/권한 드롭다운 편집 기능 추가', detail:'회원관리 테이블에서 직책·권한을 드롭다운으로 바로 수정 가능' },
+  { hash:'b69608d', date:'2026-07-28', type:'feat', msg:'system 컬럼으로 시스템별 독립 계정 분리', detail:'4M 시스템 전용 계정 분리 처리' },
+  { hash:'eb935ef', date:'2026-07-28', type:'feat', msg:'Supabase Auth 제거 — users_profile 독립 인증으로 전환', detail:'자체 비밀번호 해시 기반 인증 시스템으로 전환' },
+  { hash:'6e59bcd', date:'2026-07-28', type:'fix',  msg:'타 시스템 기존 계정으로 4M 가입 신청 가능하도록 처리', detail:'' },
+  { hash:'0327fcf', date:'2026-07-28', type:'fix',  msg:'회원가입 에러 메시지 미표시 및 data.user null 처리 버그 수정', detail:'' },
+  { hash:'b741cd0', date:'2026-07-28', type:'feat', msg:'로그인/회원가입 인증 시스템 및 회원관리 탭 추가', detail:'Supabase 기반 로그인·가입·관리자 승인 흐름 구현' },
+  { hash:'f86279b', date:'2026-07-27', type:'feat', msg:'종합현황·이력 테이블 컬럼 개선 및 검증표 헤더 편집 버그 수정', detail:'' },
+  { hash:'aceffb1', date:'2026-07-27', type:'feat', msg:'검증 표 우클릭 컨텍스트 메뉴 및 색상 토글 추가', detail:'' },
+  { hash:'113a131', date:'2026-07-27', type:'feat', msg:'검증내용 필드 추가 (다중선택·수기입력·표삽입·사진첨부)', detail:'' },
+  { hash:'ffa340e', date:'2026-07-27', type:'fix',  msg:'앱 시작 시 항상 Supabase에서 최신 BOM 로드', detail:'' },
+  { hash:'6233117', date:'2026-07-27', type:'fix',  msg:'BOM Supabase 동기화, 품종/품목명 드롭다운, 모달 외부클릭 닫힘 방지', detail:'' },
+  { hash:'a6f7eca', date:'2026-07-24', type:'feat', msg:'localStorage → Supabase 자동 마이그레이션 추가', detail:'' },
+  { hash:'563dfa1', date:'2026-07-24', type:'feat', msg:'Initial commit: 4M 변동점 관리 대시보드 (Supabase 연동)', detail:'' },
+];
+
+function renderChangelog() {
+  const wrap = document.getElementById('changelogTableWrap');
+  if (!wrap) return;
+
+  const typeBadge = t => {
+    const map = {
+      feat: ['#e8f0fe','#1565c0','기능 추가'],
+      fix:  ['#fce4ec','#c62828','버그 수정'],
+      refactor: ['#f3e5f5','#6a1b9a','리팩터'],
+      style: ['#e8f5e9','#2e7d32','스타일'],
+    };
+    const [bg, color, label] = map[t] || ['#f1f5f9','#475569', t];
+    return `<span style="background:${bg};color:${color};padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700">${label}</span>`;
+  };
+
+  const rows = DASHBOARD_CHANGELOG.map((c, i) => `
+    <tr style="border-bottom:1px solid #f0f4f8;${i===0?'background:#fffbeb;':''}">
+      <td style="padding:8px 10px;font-size:12px;color:#94a3b8;font-family:monospace">${c.hash}</td>
+      <td style="padding:8px 10px;font-size:12px;white-space:nowrap">${c.date}</td>
+      <td style="padding:8px 10px">${typeBadge(c.type)}</td>
+      <td style="padding:8px 10px;font-size:12px;font-weight:600;color:#0d2b5e">${esc(c.msg)}${i===0?` <span style="background:#f59e0b;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;margin-left:4px">최신</span>`:''}${c.detail?`<div style="font-size:11px;color:#64748b;font-weight:400;margin-top:2px">${esc(c.detail)}</div>`:''}</td>
+    </tr>`).join('');
+
+  wrap.innerHTML = `
+    <div style="margin-bottom:10px;font-size:12px;color:#64748b">총 <strong>${DASHBOARD_CHANGELOG.length}</strong>건 &nbsp;·&nbsp; Claude Code로 수정된 대시보드 변경 이력입니다.</div>
+    <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:#1a3c6e;color:#fff">
+          <th style="padding:9px 10px;text-align:left;font-size:12px;font-weight:700;white-space:nowrap">커밋</th>
+          <th style="padding:9px 10px;text-align:left;font-size:12px;font-weight:700;white-space:nowrap">날짜</th>
+          <th style="padding:9px 10px;text-align:left;font-size:12px;font-weight:700">구분</th>
+          <th style="padding:9px 10px;text-align:left;font-size:12px;font-weight:700">변경 내용</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
 
 // ═══════════════════════════════════════
 //  RENDER
@@ -4289,6 +4439,7 @@ function openDetailModal(id) {
     ${r.note ? `<div class="section-title">📝 비고</div><div class="detail-txt-box" style="margin-bottom:14px">${esc(r.note)}</div>` : ''}
     <div id="detailAttachSection"></div>
     ${detailPhotoHtml(r)}
+    ${renderEditHistoryHtml(r.id)}
   `;
   document.getElementById('detailModal').classList.add('open');
   loadAttachmentsFromIDB(r.id, files => {
