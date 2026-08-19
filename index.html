@@ -1568,7 +1568,15 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
       </div>
 
       <!-- 결재라인 -->
-      <div class="section-title">✅ 결재라인</div>
+      <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>✅ 결재라인</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="apvTemplateSelect" style="padding:3px 8px;border:1px solid #cdd5e0;border-radius:6px;font-size:11px;max-width:150px" onchange="loadApvTemplate(this.value)">
+            <option value="">📂 저장된 라인 불러오기</option>
+          </select>
+          <button type="button" class="btn" style="padding:3px 10px;font-size:11px;background:#1e5799;color:#fff;white-space:nowrap" onclick="saveApvTemplate()">💾 현재 라인 저장</button>
+        </div>
+      </div>
       <div class="apv-setup-card">
         <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
           <!-- 작성 -->
@@ -3067,6 +3075,7 @@ async function initApprovalLineUI(existingLine) {
   // 작성자 표시
   const writer = existingLine?.writer || (_currentUser ? {id:_currentUser.id, name:_currentUser.name, dept:_currentUser.dept, position:_currentUser.position, signedAt: existingLine ? null : new Date().toISOString()} : null);
   document.getElementById('approvalWriterCard').textContent = writer ? (writer.name + (writer.dept ? ' (' + writer.dept + ')' : '')) : '-';
+  refreshApvTemplateSelect();
 
   // 검토자 목록 초기화
   _approvalReviewers = existingLine?.reviewers ? existingLine.reviewers.map(r => ({...r})) : [];
@@ -3154,6 +3163,95 @@ function getApprovalLineData() {
     };
   }
   return { writer, reviewers, approver };
+}
+
+// ── 결재라인 템플릿 저장/불러오기 ──
+function _getApvTemplates() {
+  return JSON.parse(localStorage.getItem('4m_apv_templates') || '[]');
+}
+function _saveApvTemplates(list) {
+  localStorage.setItem('4m_apv_templates', JSON.stringify(list));
+}
+
+function refreshApvTemplateSelect() {
+  const sel = document.getElementById('apvTemplateSelect');
+  if (!sel) return;
+  const list = _getApvTemplates();
+  sel.innerHTML = '<option value="">📂 저장된 라인 불러오기</option>' +
+    list.map((t, i) => `<option value="${i}">${esc(t.name)}</option>`).join('');
+  // 삭제 옵션
+  if (list.length) {
+    sel.innerHTML += '<option value="__delete__" style="color:#e53935">— 템플릿 삭제...</option>';
+  }
+}
+
+function saveApvTemplate() {
+  const approverSel = document.getElementById('approvalApproverSelect');
+  const approverId  = approverSel?.value;
+  if (!_approvalReviewers.length && !approverId) {
+    showToast('⚠️ 검토자 또는 승인자를 먼저 설정하세요.'); return;
+  }
+  const name = prompt('저장할 결재라인 이름을 입력하세요:');
+  if (!name || !name.trim()) return;
+
+  const approverOpt = approverId ? approverSel.options[approverSel.selectedIndex] : null;
+  const template = {
+    name: name.trim(),
+    reviewers: _approvalReviewers.map(r => ({ id: r.id, name: r.name, dept: r.dept, position: r.position })),
+    approver: approverOpt ? { id: approverId, name: approverOpt.dataset.name, dept: approverOpt.dataset.dept, position: approverOpt.dataset.pos } : null
+  };
+
+  const list = _getApvTemplates();
+  // 같은 이름이면 덮어쓰기
+  const existing = list.findIndex(t => t.name === template.name);
+  if (existing >= 0) list[existing] = template;
+  else list.push(template);
+
+  _saveApvTemplates(list);
+  refreshApvTemplateSelect();
+  showToast(`💾 결재라인 "${template.name}" 저장 완료`);
+}
+
+async function loadApvTemplate(val) {
+  const sel = document.getElementById('apvTemplateSelect');
+  if (!val) return;
+
+  if (val === '__delete__') {
+    sel.value = '';
+    const list = _getApvTemplates();
+    if (!list.length) return;
+    const names = list.map((t, i) => `${i+1}. ${t.name}`).join('\n');
+    const input = prompt(`삭제할 템플릿 번호를 입력하세요:\n${names}`);
+    if (!input) return;
+    const idx = parseInt(input) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= list.length) { showToast('⚠️ 올바른 번호를 입력하세요.'); return; }
+    const removed = list.splice(idx, 1)[0];
+    _saveApvTemplates(list);
+    refreshApvTemplateSelect();
+    showToast(`🗑️ "${removed.name}" 삭제 완료`);
+    return;
+  }
+
+  const list = _getApvTemplates();
+  const tmpl = list[parseInt(val)];
+  if (!tmpl) return;
+
+  const users = await _loadApprovedUsers();
+
+  // 검토자 복원 (현재 사용자 목록에 존재하는 경우만)
+  _approvalReviewers = tmpl.reviewers
+    .filter(r => users.find(u => u.id === r.id))
+    .map((r, i) => ({ ...r, order: i + 1, signedAt: null }));
+  renderReviewerTags();
+
+  // 승인자 복원
+  const approverSel = document.getElementById('approvalApproverSelect');
+  if (tmpl.approver && approverSel) {
+    approverSel.value = tmpl.approver.id;
+  }
+
+  sel.value = '';
+  showToast(`📂 "${tmpl.name}" 불러오기 완료`);
 }
 
 function renderApprovalCell(r) {
