@@ -512,7 +512,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
     <button class="m-nav-item2" id="mnav-upload"    onclick="showTab('upload');closeDrawer()"><span class="mni">📂</span>업로드</button>
     <button class="m-nav-item2" id="mnav-guide"    onclick="showTab('guide');closeDrawer()"><span class="mni">📖</span>가이드</button>
     <button class="m-nav-item2" id="mnav-changelog" onclick="showTab('changelog');closeDrawer()"><span class="mni">🕓</span>이력관리</button>
-    <button class="m-nav-item2" id="mnav-users"   onclick="showTab('users');closeDrawer()" style="display:none"><span class="mni">👥</span>회원관리</button>
+    <button class="m-nav-item2" id="mnav-users"   onclick="showTab('users');closeDrawer()" style="display:none"><span class="mni">👥</span>회원관리 <span id="badge-users-m" style="display:none;background:#e74c3c;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:2px">0</span></button>
   </div>
 </nav>
 
@@ -1331,7 +1331,51 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
           </div>
         </div>
 
-        <!-- 6. FAQ -->
+        <!-- 6. 결재라인 -->
+        <div class="guide-card">
+          <div class="guide-card-header" onclick="toggleGuide(this)">
+            <span>✅ &nbsp;결재라인 기준</span><span class="guide-arrow">▾</span>
+          </div>
+          <div class="guide-card-body">
+            <p>변동점 구분에 따라 아래 결재라인을 적용합니다. 변동점 등록 시 <strong>결재라인 설정</strong> 항목에서 검토자·승인자를 지정하세요.</p>
+            <table class="guide-table" style="margin-top:8px">
+              <thead>
+                <tr>
+                  <th style="width:22%;text-align:center">구분</th>
+                  <th style="width:42%;text-align:center">검토</th>
+                  <th style="width:36%;text-align:center">승인</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>자체관리</strong></td>
+                  <td>팀장 → 실장</td>
+                  <td>실장 또는 공장장</td>
+                </tr>
+                <tr>
+                  <td><strong>단순 4M</strong></td>
+                  <td>팀장 → 실장</td>
+                  <td>실장 또는 공장장</td>
+                </tr>
+                <tr>
+                  <td><strong>중요 4M</strong></td>
+                  <td>팀장 → 실장 또는 공장장 → 부사장</td>
+                  <td>대표이사</td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="margin-top:14px;font-size:12px;color:#334155;font-weight:700;margin-bottom:6px">결재 진행 순서</div>
+            <div class="guide-step-list">
+              <div class="guide-step"><span class="guide-step-num">1</span><div>변동점 등록 시 <strong>결재라인 설정</strong>에서 검토자(순서대로)와 승인자를 지정하고 저장합니다.</div></div>
+              <div class="guide-step"><span class="guide-step-num">2</span><div>작성자 도장이 자동 날인되며, <strong>첫 번째 검토자</strong>에게 결재 버튼이 활성화됩니다.</div></div>
+              <div class="guide-step"><span class="guide-step-num">3</span><div>검토자가 순서대로 결재하면, 마지막으로 <strong>승인자</strong>에게 결재 버튼이 활성화됩니다.</div></div>
+              <div class="guide-step"><span class="guide-step-num">4</span><div>모든 결재 완료 시 테이블에 <span style="background:#fff5f5;border:2px solid #e53935;color:#e53935;border-radius:50%;padding:1px 6px;font-size:11px;font-weight:700">이름</span> 도장이 표시됩니다.</div></div>
+            </div>
+            <div class="guide-tip">💡 결재 템플릿을 저장해 두면 다음 등록 시 <strong>불러오기</strong>로 결재라인을 빠르게 재사용할 수 있습니다.</div>
+          </div>
+        </div>
+
+        <!-- 7. FAQ -->
         <div class="guide-card">
           <div class="guide-card-header" onclick="toggleGuide(this)">
             <span>❓ &nbsp;자주 묻는 질문</span><span class="guide-arrow">▾</span>
@@ -2069,6 +2113,21 @@ function _showToast(msg, color) {
   t._timer = setTimeout(() => { t.style.display = 'none'; }, 5000);
 }
 
+function _setUsersBadge(count) {
+  const b1 = document.getElementById('badge-users');
+  const b2 = document.getElementById('badge-users-m');
+  [b1, b2].forEach(b => {
+    if (!b) return;
+    b.textContent = count;
+    b.style.display = count > 0 ? '' : 'none';
+  });
+}
+
+async function _loadPendingBadge() {
+  const { data } = await _sb.from('users_profile').select('id').eq('system', '4m').eq('status', 'pending');
+  _setUsersBadge((data || []).length);
+}
+
 let _realtimeSub = null;
 function _subscribeSignupAlerts() {
   if (_realtimeSub) return;
@@ -2076,10 +2135,15 @@ function _subscribeSignupAlerts() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'users_profile', filter: 'system=eq.4m' }, payload => {
       const u = payload.new;
       if (u && u.status === 'pending') {
-        _showToast('🔔 새 가입 신청\n' + (u.name || '') + ' (' + (u.dept || '') + ')\n' + (u.email || ''));
-        // 뱃지 업데이트
-        const badge = document.getElementById('badge-users');
-        if (badge) { badge.textContent = parseInt(badge.textContent || '0') + 1; badge.style.display = ''; }
+        _showToast('🔔 새 가입 신청: ' + (u.name || '') + ' (' + (u.dept || '') + ')');
+        const b1 = document.getElementById('badge-users');
+        const b2 = document.getElementById('badge-users-m');
+        [b1, b2].forEach(b => {
+          if (!b) return;
+          const cur = parseInt(b.textContent || '0');
+          b.textContent = cur + 1;
+          b.style.display = '';
+        });
       }
     })
     .subscribe();
@@ -2098,7 +2162,10 @@ function _updateAuthBar() {
   const mnavUsers = document.getElementById('mnav-users');
   if (navUsers) navUsers.style.display = isSysAdmin ? '' : 'none';
   if (mnavUsers) mnavUsers.style.display = isSysAdmin ? '' : 'none';
-  if (isAdmin) _subscribeSignupAlerts();
+  if (isSysAdmin) {
+    _subscribeSignupAlerts();
+    _loadPendingBadge();
+  }
 }
 
 async function loadUsersFromSupabase() {
@@ -2109,8 +2176,7 @@ async function loadUsersFromSupabase() {
   if (error) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#e74c3c;">오류: ' + error.message + '</td></tr>'; return; }
   const others = (users || []).filter(u => u.email !== ADMIN_EMAIL);
   const pendingCount = others.filter(u => u.status === 'pending').length;
-  const badge = document.getElementById('badge-users');
-  if (badge) { badge.textContent = pendingCount; badge.style.display = pendingCount > 0 ? '' : 'none'; }
+  _setUsersBadge(pendingCount);
   if (!others.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#888;">등록된 회원이 없습니다.</td></tr>'; return; }
   const positions = ['대표이사','부사장','공장장','실장','팀장','팀원'];
   const selStyle = 'font-size:11px;border:1px solid #ddd;border-radius:4px;padding:3px 4px;cursor:pointer;';
@@ -2184,8 +2250,11 @@ function recToDb(r) {
     note: r.note || null,
     photos_before: r.photosBefore || [],
     photos_after: r.photosAfter || [],
-    approval_line: r.approvalLine || null,
-    quality_confirm: r.qualityConfirm || null,
+    approval_line: (() => {
+      const al = r.approvalLine ? { ...r.approvalLine } : {};
+      if (r.qualityConfirm) al._qualityConfirm = r.qualityConfirm;
+      return Object.keys(al).length ? al : null;
+    })(),
     created_at: r.createdAt || new Date().toISOString()
   };
 }
@@ -2217,8 +2286,9 @@ function dbToRec(d) {
     note: d.note,
     photosBefore: d.photos_before || [],
     photosAfter: d.photos_after || [],
-    approvalLine: d.approval_line || null,
-    qualityConfirm: d.quality_confirm || null,
+    approvalLine: d.approval_line ? (({ _qualityConfirm, ...rest }) => Object.keys(rest).length ? rest : null)(d.approval_line) : null,
+    qualityConfirm: d.approval_line?._qualityConfirm || null,
+    createdBy: d.approval_line?.writer?.id || null,
     createdAt: d.created_at
   };
 }
@@ -2959,7 +3029,19 @@ function restoreChangeItemFields(type4m, itemNo) {
 // ═══════════════════════════════════════
 //  REGISTRATION MODAL
 // ═══════════════════════════════════════
+function _canEditRecord(r) {
+  if (!_currentUser) return false;
+  if (_currentUser.role === 'admin') return true;
+  // createdBy 없는 기존 레코드는 누구나 수정 가능 (마이그레이션 기간)
+  if (!r.createdBy) return true;
+  return r.createdBy === _currentUser.id;
+}
+
 function openRegModal(id) {
+  if (id) {
+    const rec = records.find(r => r.id === id);
+    if (rec && !_canEditRecord(rec)) { showToast('⚠️ 작성자 본인만 수정할 수 있습니다.'); return; }
+  }
   editingId = id || null;
   photosBefore = []; photosAfter = [];
 
@@ -3516,6 +3598,7 @@ function saveRecord() {
     photosBefore: photosBefore.slice(),
     photosAfter:  photosAfter.slice(),
     approvalLine: getApprovalLineData(),
+    createdBy:  editingId ? (records.find(r=>r.id===editingId)?.createdBy || null) : (_currentUser?.id || null),
     createdAt:  editingId ? (records.find(r=>r.id===editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
   };
 
@@ -3767,7 +3850,7 @@ function renderOverview() {
       <td>${signalBadge(r.status)}</td>
       <td onclick="event.stopPropagation()" style="min-width:90px">${renderApprovalCell(r)}</td>
       <td style="white-space:nowrap" onclick="event.stopPropagation()">
-        <button class="btn-icon" title="수정" onclick="openRegModal('${r.id}')">✏️</button>
+        ${_canEditRecord(r) ? `<button class="btn-icon" title="수정" onclick="openRegModal('${r.id}')">✏️</button>` : ''}
       </td>
     </tr>
   `).join('');
@@ -3819,8 +3902,8 @@ function renderHistory() {
       <td onclick="event.stopPropagation()" style="min-width:90px">${renderApprovalCell(r)}</td>
       <td style="white-space:nowrap" onclick="event.stopPropagation()">
         <button class="btn-icon" title="상세" onclick="openDetailModal('${r.id}')">🔍</button>
-        <button class="btn-icon" title="수정" onclick="openRegModal('${r.id}')">✏️</button>
-        ${_currentUser?.role==='admin' ? `<button class="btn-icon" title="삭제" onclick="askDelete('${r.id}')">🗑️</button>` : ''}
+        ${_canEditRecord(r) ? `<button class="btn-icon" title="수정" onclick="openRegModal('${r.id}')">✏️</button>` : ''}
+        ${_canEditRecord(r) ? `<button class="btn-icon" title="삭제" onclick="askDelete('${r.id}')">🗑️</button>` : ''}
       </td>
     </tr>
   `).join('');
@@ -4125,8 +4208,8 @@ function renderMvTable(recs) {
           <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center" onclick="event.stopPropagation()">${renderApprovalCell(r)}</td>
           <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center;white-space:nowrap">
             <button class="btn-icon" title="상세" onclick="event.stopPropagation();openDetailModal('${r.id}')">🔍</button>
-            <button class="btn-icon" title="수정" onclick="event.stopPropagation();openRegModal('${r.id}')">✏️</button>
-            ${_currentUser?.role==='admin' ? `<button class="btn-icon" title="삭제" onclick="event.stopPropagation();askDelete('${r.id}')">🗑️</button>` : ''}
+            ${_canEditRecord(r) ? `<button class="btn-icon" title="수정" onclick="event.stopPropagation();openRegModal('${r.id}')">✏️</button>` : ''}
+            ${_canEditRecord(r) ? `<button class="btn-icon" title="삭제" onclick="event.stopPropagation();askDelete('${r.id}')">🗑️</button>` : ''}
           </td>
         </tr>`;
       }).join('')}
@@ -4619,6 +4702,8 @@ function openDetailModal(id) {
   const r = records.find(x => x.id === id);
   if (!r) return;
   currentDetailId = id;
+  const editBtn = document.getElementById('detailEditBtn');
+  if (editBtn) editBtn.style.display = _canEditRecord(r) ? '' : 'none';
 
   const detailLevel = _rvGetLevel(r) || '-';
   const detailItemName = r.changeItemNo ? (CHANGE_ITEMS.find(it => it.no === r.changeItemNo)?.name || '-') : '-';
@@ -4704,7 +4789,8 @@ function closeDetailModal() {
 //  DELETE
 // ═══════════════════════════════════════
 function askDelete(id) {
-  if (!_currentUser || _currentUser.role !== 'admin') { showToast('⚠️ 관리자만 삭제할 수 있습니다.'); return; }
+  const rec = records.find(r => r.id === id);
+  if (!rec || !_canEditRecord(rec)) { showToast('⚠️ 작성자 본인만 삭제할 수 있습니다.'); return; }
   deleteId = id;
   document.getElementById('confirmOverlay').classList.add('open');
 }
