@@ -1534,13 +1534,16 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
         </div>
         <div class="form-group">
           <label class="form-label">품질검증</label>
-          <select class="form-control" id="regQualityCheck">
-            <option value="">선택</option>
-            <option value="OK">OK</option>
-            <option value="NG">NG</option>
-            <option value="진행중">진행중</option>
-            <option value="해당없음">해당없음</option>
-          </select>
+          <div style="display:flex;align-items:center;gap:8px">
+            <select class="form-control" id="regQualityCheck" style="flex:1;min-width:0" onchange="onQCSelectChange()">
+              <option value="">선택</option>
+              <option value="OK">OK</option>
+              <option value="NG">NG</option>
+              <option value="진행중">진행중</option>
+              <option value="해당없음">해당없음</option>
+            </select>
+            <div id="qcConfirmStampPreview" style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;min-width:44px"></div>
+          </div>
         </div>
         <!-- 검증내용 -->
         <div class="form-group form-full">
@@ -2182,6 +2185,7 @@ function recToDb(r) {
     photos_before: r.photosBefore || [],
     photos_after: r.photosAfter || [],
     approval_line: r.approvalLine || null,
+    quality_confirm: r.qualityConfirm || null,
     created_at: r.createdAt || new Date().toISOString()
   };
 }
@@ -2214,6 +2218,7 @@ function dbToRec(d) {
     photosBefore: d.photos_before || [],
     photosAfter: d.photos_after || [],
     approvalLine: d.approval_line || null,
+    qualityConfirm: d.quality_confirm || null,
     createdAt: d.created_at
   };
 }
@@ -2975,6 +2980,8 @@ function openRegModal(id) {
   document.getElementById('regActionDate').value = '';
   document.getElementById('regApplyDate').value = '';
   document.getElementById('regQualityCheck').value = '';
+  const _qcPrev = document.getElementById('qcConfirmStampPreview');
+  if (_qcPrev) _qcPrev.innerHTML = '';
   resetVerificationData();
   document.getElementById('regBefore').value = '';
   document.getElementById('regAfter').value = '';
@@ -3039,6 +3046,7 @@ function openRegModal(id) {
 
   if (bomData) populateModelSelects();
   initApprovalLineUI(id ? (records.find(r=>r.id===id)?.approvalLine || null) : null);
+  initQCConfirmUI(id ? (records.find(r=>r.id===id)?.qualityConfirm || null) : null);
   document.getElementById('regModal').classList.add('open');
 }
 
@@ -3356,6 +3364,110 @@ function renderApprovalInDetail(al) {
     </div>`;
 }
 
+// ═══════════════════════════════════════
+//  품질검증 확인 도장
+// ═══════════════════════════════════════
+function initQCConfirmUI(existingConfirm) {
+  _renderQCConfirmPreview(existingConfirm);
+}
+
+function onQCSelectChange() {
+  // 수정 중인 경우 기존 서명 유지, 아니면 현재 사용자로 새로 설정
+  const existingConfirm = editingId ? (records.find(r => r.id === editingId)?.qualityConfirm || null) : null;
+  _renderQCConfirmPreview(existingConfirm);
+}
+
+function _renderQCConfirmPreview(existingConfirm) {
+  const preview = document.getElementById('qcConfirmStampPreview');
+  if (!preview) return;
+  const qcVal = document.getElementById('regQualityCheck')?.value;
+  if (!qcVal || !_currentUser) { preview.innerHTML = ''; return; }
+
+  if (existingConfirm?.signedAt) {
+    // 이미 날인된 경우 — 기존 도장 표시
+    preview.innerHTML = `<div class="apv-stamp" style="width:38px;height:38px;font-size:9px">${esc(existingConfirm.name)}</div>
+      <div style="font-size:9px;color:#888;margin-top:2px">확인완료</div>`;
+  } else {
+    // 미날인 — 현재 사용자 이름으로 대기 도장 (흐리게)
+    preview.innerHTML = `<div class="apv-stamp" style="width:38px;height:38px;font-size:9px;opacity:0.35;border-style:dashed">${esc(_currentUser.name)}</div>
+      <div style="font-size:9px;color:#94a3b8;margin-top:2px">확인자</div>`;
+  }
+}
+
+function _getQCConfirmData() {
+  if (!_currentUser) return null;
+  const qcVal = document.getElementById('regQualityCheck')?.value;
+  if (!qcVal) return null;
+  // 수정 시 기존 서명 보존
+  const existingConfirm = editingId ? (records.find(r => r.id === editingId)?.qualityConfirm || null) : null;
+  return {
+    id:       _currentUser.id,
+    name:     _currentUser.name,
+    dept:     _currentUser.dept     || '',
+    position: _currentUser.position || '',
+    signedAt: (existingConfirm?.id === _currentUser.id) ? (existingConfirm.signedAt || null) : null
+  };
+}
+
+function renderQCConfirmCell(r) {
+  const qc = r.qualityConfirm;
+  const qcLbl = r.qualityCheck || '';
+  const qcColor = qcLbl==='OK'?'#10b981':qcLbl==='NG'?'#ef4444':'#64748b';
+
+  // 확인자 미설정 → QC 값만 표시
+  if (!qc) {
+    return `<div style="font-size:11px;font-weight:700;color:${qcColor};text-align:center">${qcLbl||'-'}</div>`;
+  }
+
+  if (qc.signedAt) {
+    // 도장 날인 완료 → 도장만 표시, 아래에 OK/NG
+    return `<div style="display:flex;flex-direction:column;align-items:center;line-height:1.2">
+      <div class="apv-stamp" style="width:36px;height:36px;font-size:9px">${esc(qc.name)}</div>
+      <div style="font-size:9px;font-weight:700;color:${qcColor};margin-top:2px">${esc(qcLbl)||'-'}</div>
+    </div>`;
+  }
+
+  // 미날인
+  const isMine = _currentUser && qc.id === _currentUser.id;
+  const qcLine = `<div style="font-size:11px;font-weight:700;color:${qcColor};text-align:center">${qcLbl||'-'}</div>`;
+  if (isMine) {
+    return `<div style="line-height:1.2">${qcLine}<button onclick="doConfirmQC('${r.id}')" style="display:block;margin:3px auto 0;background:#e53935;color:#fff;border:none;border-radius:12px;padding:2px 7px;font-size:10px;cursor:pointer;white-space:nowrap">확인</button></div>`;
+  }
+  return `<div style="line-height:1.2">${qcLine}<div style="font-size:9px;color:#94a3b8;text-align:center;margin-top:2px">${esc(qc.name)}<br>대기</div></div>`;
+}
+
+async function doConfirmQC(recordId) {
+  if (!_currentUser) return;
+  const rec = records.find(r => r.id === recordId);
+  if (!rec || !rec.qualityConfirm) return;
+  if (rec.qualityConfirm.id !== _currentUser.id) { showToast('⚠️ 확인자가 아닙니다.'); return; }
+  if (rec.qualityConfirm.signedAt) { showToast('이미 확인 완료되었습니다.'); return; }
+  rec.qualityConfirm.signedAt = new Date().toISOString();
+  sbUpsert(rec);
+  renderAll();
+  showToast('✅ 품질검증 확인 완료');
+}
+
+function _renderQCConfirmDetail(r) {
+  const qc = r.qualityConfirm;
+  const qcLbl = r.qualityCheck || '';
+  const qcColor = qcLbl==='OK'?'#10b981':qcLbl==='NG'?'#ef4444':'#64748b';
+  const qcText = `<span style="font-weight:700;color:${qcColor}">${qcLbl||'-'}</span>`;
+  if (!qc) return qcText;
+  if (qc.signedAt) {
+    const d = qc.signedAt.substring(0, 10);
+    return `<div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div class="apv-stamp" style="width:46px;height:46px;font-size:11px">${esc(qc.name)}</div>
+        <div style="font-size:10px;font-weight:700;color:${qcColor};margin-top:3px">${esc(qcLbl)||'-'}</div>
+        <div style="font-size:9px;color:#94a3b8">${d}</div>
+      </div>
+      <div style="font-size:11px;color:#64748b">${esc(qc.dept||'')}${qc.position?' · '+esc(qc.position):''}</div>
+    </div>`;
+  }
+  return `${qcText} <span style="font-size:10px;color:#94a3b8">(${esc(qc.name)} 확인 대기)</span>`;
+}
+
 function saveRecord() {
   const date    = document.getElementById('regDate').value;
   const type4m  = document.getElementById('reg4m').value;
@@ -3397,6 +3509,7 @@ function saveRecord() {
     actionDate:   document.getElementById('regActionDate').value,
     applyDate:    document.getElementById('regApplyDate').value,
     qualityCheck: document.getElementById('regQualityCheck').value,
+    qualityConfirm: _getQCConfirmData(),
     verificationData: getVerificationData(),
     status:     document.getElementById('regStatus').value,
     note:       document.getElementById('regNote').value.trim(),
@@ -3650,7 +3763,7 @@ function renderOverview() {
       <td class="td-wrap">${esc(r.after)}${r.photosAfter?.length?`<div style="margin-top:4px">${photoThumb(r,'after')}</div>`:''}</td>
       <td style="font-size:11px;white-space:nowrap">${r.actionDate||'-'}</td>
       <td style="font-size:11px">${verifyBadge(r.verificationData)}</td>
-      <td style="font-size:11px;text-align:center;font-weight:700;color:${r.qualityCheck==='OK'?'#10b981':r.qualityCheck==='NG'?'#ef4444':'#64748b'}">${r.qualityCheck||'-'}</td>
+      <td onclick="event.stopPropagation()" style="text-align:center;vertical-align:middle">${renderQCConfirmCell(r)}</td>
       <td>${signalBadge(r.status)}</td>
       <td onclick="event.stopPropagation()" style="min-width:90px">${renderApprovalCell(r)}</td>
       <td style="white-space:nowrap" onclick="event.stopPropagation()">
@@ -3700,7 +3813,7 @@ function renderHistory() {
       <td class="td-wrap">${esc(r.after)}${r.photosAfter?.length?`<div style="margin-top:4px">${photoThumb(r,'after')}</div>`:''}</td>
       <td style="font-size:11px;white-space:nowrap">${r.actionDate||'-'}</td>
       <td style="font-size:11px">${verifyBadge(r.verificationData)}</td>
-      <td style="font-size:11px;text-align:center;font-weight:700;color:${r.qualityCheck==='OK'?'#10b981':r.qualityCheck==='NG'?'#ef4444':'#64748b'}">${r.qualityCheck||'-'}</td>
+      <td onclick="event.stopPropagation()" style="text-align:center;vertical-align:middle">${renderQCConfirmCell(r)}</td>
       <td>${signalBadge(r.status)}</td>
       <td class="td-wrap" style="max-width:120px">${esc(r.note||'-')}</td>
       <td onclick="event.stopPropagation()" style="min-width:90px">${renderApprovalCell(r)}</td>
@@ -4556,7 +4669,7 @@ function openDetailModal(id) {
       <div class="detail-field"><label>조치시점</label><div class="val">${r.actionDate||'-'}</div></div>
       <div class="detail-field"><label>적용시점</label><div class="val">${r.applyDate||'-'}</div></div>
       <div class="detail-field"><label>조치결과</label><div class="val">${signalBadge(r.status)}</div></div>
-      <div class="detail-field"><label>품질검증</label><div class="val">${r.qualityCheck||'-'}</div></div>
+      <div class="detail-field"><label>품질검증</label><div class="val">${_renderQCConfirmDetail(r)}</div></div>
       ${renderVerifyDetailView(r.verificationData)}
     </div>
 
