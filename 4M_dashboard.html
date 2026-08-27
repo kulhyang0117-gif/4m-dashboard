@@ -3348,16 +3348,23 @@ function renderApprovalCell(r) {
   const al = r.approvalLine;
   if (!al) return '<span style="font-size:10px;color:#cbd5e1">-</span>';
 
-  const roles = [];
-  if (al.writer)    roles.push({ label: al.writer.position || '작성', person: al.writer, type: 'writer' });
-  (al.reviewers || []).forEach((rv, i) => roles.push({ label: rv.position || ('검토'+(al.reviewers.length>1?(i+1):'')), person: rv, type: 'reviewer', order: rv.order }));
-  if (al.approver)  roles.push({ label: al.approver.position || '승인', person: al.approver, type: 'approver' });
+  // 5칸 고정: 작성 → 검토(등록 순) → 승인 → 빈칸(뒤로)
+  const reviewers = al.reviewers || [];
+  const filled = [];
+  if (al.writer)   filled.push({ label: al.writer.position || '작성',  person: al.writer,   type: 'writer',   order: 0 });
+  reviewers.forEach((rv, i) => filled.push({ label: rv.position || ('검토'+(reviewers.length>1?i+1:'')), person: rv, type: 'reviewer', order: rv.order }));
+  if (al.approver) filled.push({ label: al.approver.position || '승인', person: al.approver, type: 'approver', order: 0 });
+  const emptyCount = 5 - filled.length;
+  const slots = [
+    ...filled,
+    ...Array.from({ length: Math.max(0, emptyCount) }, (_, i) => ({ label: `검토${reviewers.length+i+1}`, person: null, type: 'empty', order: 0 })),
+  ];
 
-  if (!roles.length) return '<span style="font-size:10px;color:#cbd5e1">-</span>';
-
-  const cells = roles.map((ro, idx) => {
+  const cells = slots.map((ro, idx) => {
     let inner;
-    if (ro.person.signedAt) {
+    if (!ro.person) {
+      inner = `<div class="apv-num" style="color:#e2e8f0">-</div>`;
+    } else if (ro.person.signedAt) {
       inner = `<div class="apv-stamp">${esc(ro.person.name)}</div><div class="apv-signed-lbl">기결</div>`;
     } else {
       const isNext = _isNextApprover(al, ro.type, ro.order);
@@ -3368,7 +3375,7 @@ function renderApprovalCell(r) {
         inner = `<div class="apv-num">${idx+1}</div><div style="font-size:9px;color:#94a3b8">${esc(ro.person.name)}</div>`;
       }
     }
-    return `<div class="apv-cell"><div class="apv-role-lbl">${ro.label}</div>${inner}</div>`;
+    return `<div class="apv-cell"><div class="apv-role-lbl">${ro.type === 'empty' ? '&nbsp;' : ro.label}</div>${inner}</div>`;
   }).join('');
 
   return `<div class="apv-row">${cells}</div>`;
