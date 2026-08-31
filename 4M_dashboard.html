@@ -2295,7 +2295,9 @@ function dbToRec(d) {
 
 async function sbLoad() {
   showDbLoading(true);
-  const { data, error } = await _sb.from('records').select('*').order('date', { ascending: false });
+  const { data, error } = await _sb.from('records')
+    .select('id,date,type4m,report_std,change_item_no,change_desc,dept,model_code,model_name,part_code,part_name,cust_part_no,customer,part_type,before_content,after_content,assignee,action_date,apply_date,quality_check,verification_data,status,note,approval_line,created_at')
+    .order('date', { ascending: false });
   showDbLoading(false);
   if (error) {
     console.error('Supabase load error:', error);
@@ -2314,6 +2316,17 @@ async function sbLoad() {
   }
 
   records = (data || []).map(dbToRec);
+}
+
+async function sbLoadRecordPhotos(id) {
+  const rec = records.find(r => r.id === id);
+  if (!rec || rec._photosLoaded) return;
+  const { data } = await _sb.from('records').select('photos_before,photos_after').eq('id', id).single();
+  if (data) {
+    rec.photosBefore = data.photos_before || [];
+    rec.photosAfter  = data.photos_after  || [];
+  }
+  rec._photosLoaded = true;
 }
 
 async function sbMigrateFromLocal(localRecords) {
@@ -3042,10 +3055,11 @@ function _canEditRecord(r) {
   return r.createdBy === _currentUser.id;
 }
 
-function openRegModal(id) {
+async function openRegModal(id) {
   if (id) {
     const rec = records.find(r => r.id === id);
     if (rec && !_canEditRecord(rec)) { showToast('⚠️ 작성자 본인만 수정할 수 있습니다.'); return; }
+    await sbLoadRecordPhotos(id);
   }
   editingId = id || null;
   photosBefore = []; photosAfter = [];
@@ -4710,9 +4724,10 @@ function clearFilters() {
 //  DETAIL MODAL
 // ═══════════════════════════════════════
 let currentDetailId = null;
-function openDetailModal(id) {
+async function openDetailModal(id) {
   const r = records.find(x => x.id === id);
   if (!r) return;
+  await sbLoadRecordPhotos(id);
   currentDetailId = id;
   const editBtn = document.getElementById('detailEditBtn');
   if (editBtn) editBtn.style.display = _canEditRecord(r) ? '' : 'none';
