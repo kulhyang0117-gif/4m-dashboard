@@ -6,7 +6,7 @@
 <title>4M 변동점 관리 대시보드</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#eef1f7;color:#222;min-height:100vh}
@@ -253,7 +253,7 @@ textarea.form-control{min-height:70px;resize:vertical}
 .confirm-ft{padding:10px 18px 16px;display:flex;justify-content:flex-end;gap:8px}
 
 /* ── TOAST ── */
-.toast{position:fixed;bottom:28px;right:28px;background:#0d2b5e;color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:700;z-index:3000;transform:translateY(80px);opacity:0;transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.toast{position:fixed;bottom:28px;right:28px;background:#0d2b5e;color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:700;z-index:3000;transform:translateY(80px);opacity:0;transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.3);max-width:420px;word-break:break-all}
 .toast.show{transform:translateY(0);opacity:1}
 
 /* ── SECTION TITLE ── */
@@ -2297,7 +2297,12 @@ async function sbLoad() {
   showDbLoading(true);
   const { data, error } = await _sb.from('records').select('*').order('date', { ascending: false });
   showDbLoading(false);
-  if (error) { console.error('Supabase load error:', error); showToast('⚠️ 데이터 로드 실패'); return; }
+  if (error) {
+    console.error('Supabase load error:', error);
+    const msg = error.message || error.code || JSON.stringify(error);
+    showToast('⚠️ 데이터 로드 실패: ' + msg, 8000);
+    return;
+  }
 
   // Supabase가 비어있고 localStorage에 데이터가 있으면 자동 마이그레이션
   if ((!data || data.length === 0)) {
