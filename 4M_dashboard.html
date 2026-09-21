@@ -3370,9 +3370,9 @@ function renderApprovalCell(r) {
   // 5칸 고정: 작성 → 검토(등록 순) → 승인 → 빈칸(뒤로)
   const reviewers = al.reviewers || [];
   const filled = [];
-  if (al.writer)   filled.push({ label: al.writer.position || '작성',  person: al.writer,   type: 'writer',   order: 0 });
-  reviewers.forEach((rv, i) => filled.push({ label: rv.position || ('검토'+(reviewers.length>1?i+1:'')), person: rv, type: 'reviewer', order: rv.order }));
-  if (al.approver) filled.push({ label: al.approver.position || '승인', person: al.approver, type: 'approver', order: 0 });
+  if (al.writer)   filled.push({ label: '작성',  person: al.writer,   type: 'writer',   order: 0 });
+  reviewers.forEach((rv, i) => filled.push({ label: '검토'+(reviewers.length>1?i+1:''), person: rv, type: 'reviewer', order: rv.order }));
+  if (al.approver) filled.push({ label: '승인', person: al.approver, type: 'approver', order: 0 });
   const emptyCount = 5 - filled.length;
   const slots = [
     ...filled,
@@ -3386,7 +3386,7 @@ function renderApprovalCell(r) {
     } else if (ro.person.signedAt) {
       inner = `<div class="apv-stamp">${esc(ro.person.name)}</div><div class="apv-signed-lbl">기결</div>`;
     } else {
-      const isNext = _isNextApprover(al, ro.type, ro.order);
+      const isNext = _isNextApprover(al, ro.type, ro.order, r.qualityConfirm);
       const isCurrent = _currentUser && ro.person.id === _currentUser.id && isNext;
       if (isCurrent) {
         inner = `<button onclick="doApproveRecord('${r.id}','${ro.type}',${ro.order||0})" style="background:#e53935;color:#fff;border:none;border-radius:12px;padding:2px 6px;font-size:10px;cursor:pointer">결재</button>`;
@@ -3400,13 +3400,15 @@ function renderApprovalCell(r) {
   return `<div class="apv-row">${cells}</div>`;
 }
 
-function _isNextApprover(al, type, order) {
+function _isNextApprover(al, type, order, qualityConfirm) {
   // 작성은 항상 완료
   if (type === 'writer') return false;
   // 이전 단계가 모두 완료되어야 함
   if (!al.writer?.signedAt) return false;
   const reviewers = al.reviewers || [];
   if (type === 'reviewer') {
+    // 품질검증 확인 도장이 완료되어야 검토 서명 가능
+    if (!qualityConfirm?.signedAt) return false;
     // 이전 검토자들이 모두 서명 완료되어야 함
     const prev = reviewers.filter(r => r.order < order);
     return prev.every(r => r.signedAt);
@@ -3427,12 +3429,13 @@ async function doApproveRecord(recordId, type, order) {
   if (type === 'reviewer') {
     const rv = al.reviewers.find(r => r.order === order);
     if (rv && rv.id === _currentUser.id) {
-      if (!_isNextApprover(al, type, order)) { showToast('⚠️ 이전 단계 결재가 완료되지 않았습니다.'); return; }
+      if (!rec.qualityConfirm?.signedAt) { showToast('⚠️ 품질검증 확인 도장이 완료되지 않았습니다.'); return; }
+      if (!_isNextApprover(al, type, order, rec.qualityConfirm)) { showToast('⚠️ 이전 단계 결재가 완료되지 않았습니다.'); return; }
       rv.signedAt = now;
     }
   } else if (type === 'approver') {
     if (al.approver && al.approver.id === _currentUser.id) {
-      if (!_isNextApprover(al, type, order)) { showToast('⚠️ 검토가 완료되지 않았습니다.'); return; }
+      if (!_isNextApprover(al, type, order, rec.qualityConfirm)) { showToast('⚠️ 검토가 완료되지 않았습니다.'); return; }
       al.approver.signedAt = now;
     }
   }
@@ -3445,9 +3448,9 @@ async function doApproveRecord(recordId, type, order) {
 function renderApprovalInDetail(al) {
   if (!al) return '';
   const roles = [];
-  if (al.writer)    roles.push({ label: al.writer.position || '작성', person: al.writer });
-  (al.reviewers || []).forEach((rv, i) => roles.push({ label: rv.position || ('검토'+(al.reviewers.length>1?(i+1):'')), person: rv }));
-  if (al.approver)  roles.push({ label: al.approver.position || '승인', person: al.approver });
+  if (al.writer)    roles.push({ label: '작성', person: al.writer });
+  (al.reviewers || []).forEach((rv, i) => roles.push({ label: '검토'+(al.reviewers.length>1?(i+1):''), person: rv }));
+  if (al.approver)  roles.push({ label: '승인', person: al.approver });
   if (!roles.length) return '';
 
   const cells = roles.map((ro, idx) => {
@@ -3775,10 +3778,10 @@ function updateApprovalBadge() {
     if (!al) return;
     // 검토자 중 내 차례인지 확인
     (al.reviewers || []).forEach(rv => {
-      if (rv.id === _currentUser.id && !rv.signedAt && _isNextApprover(al, 'reviewer', rv.order)) count++;
+      if (rv.id === _currentUser.id && !rv.signedAt && _isNextApprover(al, 'reviewer', rv.order, r.qualityConfirm)) count++;
     });
     // 승인자인지 확인
-    if (al.approver && al.approver.id === _currentUser.id && !al.approver.signedAt && _isNextApprover(al, 'approver', 0)) count++;
+    if (al.approver && al.approver.id === _currentUser.id && !al.approver.signedAt && _isNextApprover(al, 'approver', 0, r.qualityConfirm)) count++;
   });
   const badge = document.getElementById('badge-approval');
   const mbadge = document.getElementById('mbadge-approval');
