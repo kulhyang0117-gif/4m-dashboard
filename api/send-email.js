@@ -51,9 +51,15 @@ async function getWebmailSession() {
   const USER = process.env.GW_USER || 'ass';
   const PASS = process.env.GW_PASS || 'whflq123!';
 
-  // 1. 암호화 키 발급
-  const kRes  = await req(`${GW}/login.php?mode=get_encrypt_key`);
+  // 0. 로그인 페이지 먼저 로드 → 세션 쿠키 확보
+  const loginPageRes = await req(`${GW}/login.php`);
+  const initCookies  = (loginPageRes.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+
+  // 1. 암호화 키 발급 (세션 쿠키 포함)
+  const kRes  = await req(`${GW}/login.php?mode=get_encrypt_key`, { headers: { 'Cookie': initCookies } });
   const kData = JSON.parse(kRes.body);
+  const keyCookies = [...(loginPageRes.headers['set-cookie'] || []), ...(kRes.headers['set-cookie'] || [])]
+    .map(c => c.split(';')[0]).join('; ');
   const encId = aesEncrypt(kData.key, kData.iv, USER);
   const encPw = aesEncrypt(kData.key, kData.iv, PASS);
 
@@ -74,12 +80,12 @@ async function getWebmailSession() {
     `${GW}/login.php?mode=loginAct`,
     {
       method  : 'POST',
-      headers : { 'Content-Type': 'application/x-www-form-urlencoded', 'Referer': `${GW}/login.php` },
+      headers : { 'Content-Type': 'application/x-www-form-urlencoded', 'Referer': `${GW}/login.php`, 'Cookie': keyCookies },
       body    : loginBody,
     }
   );
-  const gwCookie = (loginRes.headers['set-cookie'] || [])
-    .map(c => c.split(';')[0]).join('; ');
+  const allCookies = [...(loginPageRes.headers['set-cookie'] || []), ...(loginRes.headers['set-cookie'] || [])];
+  const gwCookie   = allCookies.map(c => c.split(';')[0]).filter(Boolean).join('; ');
   if (!gwCookie) throw new Error('그룹웨어 로그인 실패 — 세션 없음');
 
   // 4. 그룹웨어 AutoLogin → SSO URL 취득

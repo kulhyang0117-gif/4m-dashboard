@@ -40,10 +40,17 @@ module.exports = async function handler(req2, res) {
   try {
     const GW = 'http://gw.ssautotech.co.kr/groupware';
 
-    // Step 1: 암호화 키
-    const kRes  = await req(`${GW}/login.php?mode=get_encrypt_key`);
+    // Step 0: 로그인 페이지 먼저 로드해서 세션 쿠키 확보
+    const loginPageRes = await req(`${GW}/login.php`);
+    const initCookies  = (loginPageRes.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+    log.push({ step: '0_loginpage', cookies: initCookies });
+
+    // Step 1: 암호화 키 (세션 쿠키 포함)
+    const kRes  = await req(`${GW}/login.php?mode=get_encrypt_key`, { headers: { 'Cookie': initCookies } });
     const kData = JSON.parse(kRes.body);
-    log.push({ step: '1_key', ok: !!(kData.key && kData.iv) });
+    const keyCookies = [...(loginPageRes.headers['set-cookie'] || []), ...(kRes.headers['set-cookie'] || [])]
+      .map(c => c.split(';')[0]).join('; ');
+    log.push({ step: '1_key', ok: !!(kData.key && kData.iv), cookies: keyCookies });
 
     const encId = aesEncrypt(kData.key, kData.iv, 'ass');
     const encPw = aesEncrypt(kData.key, kData.iv, 'whflq123!');
@@ -58,10 +65,10 @@ module.exports = async function handler(req2, res) {
     log.push({ step: '2_cafe24ssl', ok: !!lkMatch, bodySnippet: sslRes.body.substring(0, 100) });
     if (!lkMatch) throw new Error('login_key 취득 실패');
 
-    // Step 3: 로그인
+    // Step 3: 로그인 (세션 쿠키 포함)
     const loginRes = await req(`${GW}/login.php?mode=loginAct`, {
       method  : 'POST',
-      headers : { 'Content-Type': 'application/x-www-form-urlencoded', 'Referer': `${GW}/login.php` },
+      headers : { 'Content-Type': 'application/x-www-form-urlencoded', 'Referer': `${GW}/login.php`, 'Cookie': keyCookies },
       body    : new URLSearchParams({ login_key: lkMatch[1] }).toString(),
     });
     const setCookies = loginRes.headers['set-cookie'] || [];
