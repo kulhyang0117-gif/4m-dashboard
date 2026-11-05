@@ -3557,6 +3557,7 @@ async function doConfirmQC(recordId) {
   sbUpsert(rec);
   renderAll();
   showToast('✅ 품질검증 확인 완료');
+  sendEmailToFirstReviewer(rec);
 }
 
 function _renderQCConfirmDetail(r) {
@@ -3644,7 +3645,10 @@ function saveRecord() {
   logEditHistory(rec.id, wasEditing ? '수정' : '등록');
   renderAll();
   sbUpsert(rec).then(ok => {
-    if (ok) showToast(wasEditing ? '✅ 변동점 수정 완료' : '✅ 변동점 등록 완료');
+    if (ok) {
+      showToast(wasEditing ? '✅ 변동점 수정 완료' : '✅ 변동점 등록 완료');
+      if (!wasEditing) sendEmailToQualityTeam(rec);
+    }
   });
 }
 
@@ -5576,6 +5580,83 @@ function ctxDeleteCol() {
   _ctxCg.children[ci]?.remove();
   allThs[ci]?.remove();
   [..._ctxTable.querySelectorAll('tbody tr')].forEach(tr => tr.children[ci]?.remove());
+}
+
+// ═══════════════════════════════════════
+//  자동 메일 발송
+// ═══════════════════════════════════════
+
+function _buildEmailHtml(type) {
+  const dashRed = s => `<span style="color:#e53935;text-decoration:underline">${s}</span>`;
+  if (type === 'quality') {
+    return `<div style="font-family:'맑은 고딕',Arial,sans-serif;font-size:14px;line-height:2;color:#222">
+<p>"즉시 실행합시다"</p>
+<p>4M ${dashRed('변동점')} 관리 ${dashRed('대시보드에')} 신규 ${dashRed('변동점')} 등록이 1건 있습니다.</p>
+<p>이상입니다.</p>
+<p><span style="color:#e53935;text-decoration:underline">대시보드에서 자동으로 보냄</span></p>
+</div>`;
+  }
+  // type === 'reviewer'
+  return `<div style="font-family:'맑은 고딕',Arial,sans-serif;font-size:14px;line-height:2;color:#222">
+<p>"즉시 실행합시다"</p>
+<p>4M ${dashRed('변동점')} 관리 ${dashRed('대시보드에')} ${dashRed('변동점')} 신규 등록이 있어 결재가 필요합니다.</p>
+<p>이상입니다.</p>
+<p>${dashRed('변동점')} 관리 ${dashRed('대시보드에서 자동으로 보냄')}</p>
+</div>`;
+}
+
+async function sendEmailToQualityTeam(rec) {
+  try {
+    const { data: qUsers } = await _sb
+      .from('users_profile')
+      .select('email, name')
+      .eq('system', '4m')
+      .eq('status', 'approved')
+      .eq('dept', '품질팀');
+
+    const emails = (qUsers || []).map(u => u.email).filter(Boolean);
+    if (!emails.length) return;
+
+    await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: emails,
+        subject: '4M 변동점 관리 대시보드 확인요청',
+        html: _buildEmailHtml('quality')
+      })
+    });
+  } catch (e) {
+    console.warn('[메일] 품질팀 발송 실패:', e.message);
+  }
+}
+
+async function sendEmailToFirstReviewer(rec) {
+  try {
+    const reviewers = rec.approvalLine?.reviewers || [];
+    const first = reviewers.find(r => r.order === 1);
+    if (!first?.id) return;
+
+    const { data: user } = await _sb
+      .from('users_profile')
+      .select('email')
+      .eq('id', first.id)
+      .maybeSingle();
+
+    if (!user?.email) return;
+
+    await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: user.email,
+        subject: '4M 변동점 관리 대시보드 확인요청',
+        html: _buildEmailHtml('reviewer')
+      })
+    });
+  } catch (e) {
+    console.warn('[메일] 검토자 발송 실패:', e.message);
+  }
 }
 </script>
 
