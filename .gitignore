@@ -1,0 +1,6 @@
+.vercel
+.claude/
+토큰.txt
+*.xlsx
+*.pptx
+*.png
