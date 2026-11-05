@@ -1198,7 +1198,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
               <td style="padding:8px 10px;text-align:center;">팀장</td>
               <td style="padding:8px 10px;text-align:center;font-weight:700;">양춘향</td>
               <td style="padding:8px 10px;text-align:center;">kulhyang0117@gmail.com</td>
-              <td style="padding:8px 10px;text-align:center;font-size:11px;color:#aaa;">-</td>
+              <td style="padding:8px 10px;text-align:center;" id="admin-send-email-cell"><span style="font-size:11px;color:#aaa;">불러오는 중...</span></td>
               <td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:#e65100;">관리자</span></td>
               <td style="padding:8px 10px;text-align:center;color:#28a745;font-weight:700;">승인됨</td>
               <td style="padding:8px 10px;text-align:center;font-size:11px;color:#aaa;">-</td>
@@ -2177,10 +2177,21 @@ async function loadUsersFromSupabase() {
   tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#888;">불러오는 중...</td></tr>';
   const { data: users, error } = await _sb.from('users_profile').select('*').eq('system', '4m').order('created_at', { ascending: false });
   if (error) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#e74c3c;">오류: ' + error.message + '</td></tr>'; return; }
+  const adminUser = (users || []).find(u => u.email === ADMIN_EMAIL);
   const others = (users || []).filter(u => u.email !== ADMIN_EMAIL);
+
+  // 시스템 고정 관리자 발송용 메일 셀 업데이트
+  const adminCell = document.getElementById('admin-send-email-cell');
+  if (adminCell && adminUser) {
+    adminCell.innerHTML = `<input type="email" value="${esc(adminUser.send_email || adminUser.email || '')}"
+      style="font-size:11px;border:1px solid #ddd;border-radius:4px;padding:3px 6px;width:160px;"
+      onchange="updateUserField('${adminUser.id}','send_email',this.value)"
+      placeholder="${esc(adminUser.email || '')}">`;
+  }
+
   const pendingCount = others.filter(u => u.status === 'pending').length;
   _setUsersBadge(pendingCount);
-  if (!others.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#888;">등록된 회원이 없습니다.</td></tr>'; return; }
+  if (!others.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#888;">등록된 회원이 없습니다.</td></tr>'; return; }
   const positions = ['대표이사','부사장','공장장','실장','팀장','팀원'];
   const selStyle = 'font-size:11px;border:1px solid #ddd;border-radius:4px;padding:3px 4px;cursor:pointer;';
   tbody.innerHTML = others.map(u => {
