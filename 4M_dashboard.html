@@ -1185,6 +1185,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
               <th style="padding:8px 10px;text-align:center;">직책</th>
               <th style="padding:8px 10px;text-align:center;">이름</th>
               <th style="padding:8px 10px;text-align:center;">이메일</th>
+              <th style="padding:8px 10px;text-align:center;">발송용 메일</th>
               <th style="padding:8px 10px;text-align:center;">권한</th>
               <th style="padding:8px 10px;text-align:center;">상태</th>
               <th style="padding:8px 10px;text-align:center;">가입일</th>
@@ -1197,6 +1198,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
               <td style="padding:8px 10px;text-align:center;">팀장</td>
               <td style="padding:8px 10px;text-align:center;font-weight:700;">양춘향</td>
               <td style="padding:8px 10px;text-align:center;">kulhyang0117@gmail.com</td>
+              <td style="padding:8px 10px;text-align:center;font-size:11px;color:#aaa;">-</td>
               <td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:#e65100;">관리자</span></td>
               <td style="padding:8px 10px;text-align:center;color:#28a745;font-weight:700;">승인됨</td>
               <td style="padding:8px 10px;text-align:center;font-size:11px;color:#aaa;">-</td>
@@ -2172,9 +2174,9 @@ function _updateAuthBar() {
 async function loadUsersFromSupabase() {
   const tbody = document.getElementById('users-tbody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:16px;color:#888;">불러오는 중...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:#888;">불러오는 중...</td></tr>';
   const { data: users, error } = await _sb.from('users_profile').select('*').eq('system', '4m').order('created_at', { ascending: false });
-  if (error) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#e74c3c;">오류: ' + error.message + '</td></tr>'; return; }
+  if (error) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#e74c3c;">오류: ' + error.message + '</td></tr>'; return; }
   const others = (users || []).filter(u => u.email !== ADMIN_EMAIL);
   const pendingCount = others.filter(u => u.status === 'pending').length;
   _setUsersBadge(pendingCount);
@@ -2194,11 +2196,16 @@ async function loadUsersFromSupabase() {
       ? `<button onclick="approveUser('${u.id}')" style="background:#28a745;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">승인</button><button onclick="rejectUser('${u.id}')" style="background:#e74c3c;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">거절</button>`
       : '';
     const deleteBtn = `<button onclick="deleteUserSb('${u.id}')" style="background:#888;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;margin-left:4px;">삭제</button>`;
+    const sendEmailInput = `<input type="email" value="${esc(u.send_email || u.email || '')}"
+      style="font-size:11px;border:1px solid #ddd;border-radius:4px;padding:3px 6px;width:160px;"
+      onchange="updateUserField('${u.id}','send_email',this.value)"
+      placeholder="${esc(u.email || '')}">`;
     return `<tr style="border-bottom:1px solid #eee;">
       <td style="padding:8px 10px;text-align:center;">${u.dept || '-'}</td>
       <td style="padding:8px 10px;text-align:center;">${posSelect}</td>
       <td style="padding:8px 10px;text-align:center;font-weight:700;">${u.name || '-'}</td>
-      <td style="padding:8px 10px;text-align:center;">${u.email || ''}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:11px;color:#555;">${u.email || ''}</td>
+      <td style="padding:8px 10px;text-align:center;">${sendEmailInput}</td>
       <td style="padding:8px 10px;text-align:center;">${roleSelect}</td>
       <td style="padding:8px 10px;text-align:center;color:${statusColor};font-weight:700;">${statusText}</td>
       <td style="padding:8px 10px;text-align:center;font-size:11px;color:#aaa;">${(u.created_at || '').substring(0, 10)}</td>
@@ -5625,12 +5632,12 @@ async function sendEmailToQualityTeam(rec) {
   try {
     const { data: qUsers } = await _sb
       .from('users_profile')
-      .select('email, name')
+      .select('email, send_email, name')
       .eq('system', '4m')
       .eq('status', 'approved')
       .eq('dept', '품질팀');
 
-    const emails = (qUsers || []).map(u => u.email).filter(Boolean);
+    const emails = (qUsers || []).map(u => u.send_email || u.email).filter(Boolean);
     if (!emails.length) return;
 
     await fetch('/api/send-email', {
@@ -5669,23 +5676,24 @@ async function sendEmailToPersonById(userId) {
     console.log('[메일] userId로 이메일 조회:', userId);
     const { data: user, error } = await _sb
       .from('users_profile')
-      .select('email')
+      .select('email, send_email')
       .eq('id', userId)
       .maybeSingle();
 
     console.log('[메일] 조회 결과:', user, 'error:', error);
-    if (!user?.email) {
+    const toEmail = user?.send_email || user?.email;
+    if (!toEmail) {
       console.warn('[메일] 이메일 없음 userId:', userId);
       showToast('⚠️ 담당자 이메일 정보가 없습니다 (userId: ' + userId + ')');
       return;
     }
 
-    console.log('[메일] 발송 대상:', user.email);
+    console.log('[메일] 발송 대상:', toEmail);
     const res = await fetch('/api/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        to: user.email,
+        to: toEmail,
         subject: '4M 변동점 관리 대시보드 확인요청',
         html: _buildEmailHtml('reviewer')
       })
