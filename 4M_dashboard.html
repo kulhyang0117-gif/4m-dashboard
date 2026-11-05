@@ -5650,25 +5650,38 @@ async function sendEmailToQualityTeam(rec) {
 async function sendEmailToFirstReviewer(rec) {
   try {
     const reviewers = rec.approvalLine?.reviewers || [];
+    console.log('[메일] 검토자 목록:', JSON.stringify(reviewers));
     const first = reviewers.find(r => r.order === 1);
-    if (!first?.id) return;
+    if (!first?.id) {
+      console.warn('[메일] order===1 검토자 없음. reviewers:', reviewers);
+      return;
+    }
+    console.log('[메일] 검토1 담당자 id:', first.id, 'name:', first.name);
     await sendEmailToPersonById(first.id);
   } catch (e) {
     console.warn('[메일] 검토자 발송 실패:', e.message);
+    showToast('⚠️ 검토자 메일 발송 실패: ' + e.message);
   }
 }
 
 async function sendEmailToPersonById(userId) {
   try {
-    const { data: user } = await _sb
+    console.log('[메일] userId로 이메일 조회:', userId);
+    const { data: user, error } = await _sb
       .from('users_profile')
       .select('email')
       .eq('id', userId)
       .maybeSingle();
 
-    if (!user?.email) return;
+    console.log('[메일] 조회 결과:', user, 'error:', error);
+    if (!user?.email) {
+      console.warn('[메일] 이메일 없음 userId:', userId);
+      showToast('⚠️ 담당자 이메일 정보가 없습니다 (userId: ' + userId + ')');
+      return;
+    }
 
-    await fetch('/api/send-email', {
+    console.log('[메일] 발송 대상:', user.email);
+    const res = await fetch('/api/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -5677,8 +5690,16 @@ async function sendEmailToPersonById(userId) {
         html: _buildEmailHtml('reviewer')
       })
     });
+    const result = await res.json();
+    if (!result.success) {
+      console.warn('[메일] API 오류:', result.error);
+      showToast('⚠️ 메일 발송 실패: ' + result.error);
+    } else {
+      console.log('[메일] 발송 성공:', result);
+    }
   } catch (e) {
     console.warn('[메일] 발송 실패:', e.message);
+    showToast('⚠️ 메일 발송 오류: ' + e.message);
   }
 }
 
