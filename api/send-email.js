@@ -71,7 +71,7 @@ async function getWebmailSession() {
   // 3. 그룹웨어 로그인 POST
   const loginBody = new URLSearchParams({ login_key: loginKey }).toString();
   const loginRes  = await req(
-    `${GW}/login.php?mode=loginAct&REMOTE_ADDR=0.0.0.0`,
+    `${GW}/login.php?mode=loginAct`,
     {
       method  : 'POST',
       headers : { 'Content-Type': 'application/x-www-form-urlencoded', 'Referer': `${GW}/login.php` },
