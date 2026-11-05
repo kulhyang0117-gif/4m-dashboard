@@ -84,8 +84,8 @@ async function getWebmailSession() {
       body    : loginBody,
     }
   );
-  const allCookies = [...(loginPageRes.headers['set-cookie'] || []), ...(loginRes.headers['set-cookie'] || [])];
-  const gwCookie   = allCookies.map(c => c.split(';')[0]).filter(Boolean).join('; ');
+  const gwCookie = (loginRes.headers['set-cookie'] || [])
+    .map(c => c.split(';')[0]).filter(Boolean).join('; ');
   if (!gwCookie) throw new Error('그룹웨어 로그인 실패 — 세션 없음');
 
   // 4. 그룹웨어 AutoLogin → SSO URL 취득
