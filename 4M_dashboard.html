@@ -3432,6 +3432,12 @@ async function doApproveRecord(recordId, type, order) {
       if (!rec.qualityConfirm?.signedAt) { showToast('⚠️ 품질검증 확인 도장이 완료되지 않았습니다.'); return; }
       if (!_isNextApprover(al, type, order, rec.qualityConfirm)) { showToast('⚠️ 이전 단계 결재가 완료되지 않았습니다.'); return; }
       rv.signedAt = now;
+      const nextRv = al.reviewers.find(r => r.order === order + 1);
+      if (nextRv) {
+        sendEmailToPersonById(nextRv.id);
+      } else if (al.approver) {
+        sendEmailToPersonById(al.approver.id);
+      }
     }
   } else if (type === 'approver') {
     if (al.approver && al.approver.id === _currentUser.id) {
@@ -5586,25 +5592,30 @@ function ctxDeleteCol() {
 //  자동 메일 발송
 // ═══════════════════════════════════════
 
+function _toEnt(str) {
+  return [...str].map(c => c.charCodeAt(0) > 127 ? '&#' + c.charCodeAt(0) + ';' : c).join('');
+}
+
 function _buildEmailHtml(type) {
   const DASH_URL = 'https://4m-gray.vercel.app/';
+  const style = "font-family:'Malgun Gothic',Arial,sans-serif;font-size:14px;line-height:2;color:#222;padding:16px";
   const linkHtml = `<p><a href="${DASH_URL}" style="color:#1565c0;font-weight:700">${DASH_URL}</a></p>`;
   if (type === 'quality') {
-    return `<div style="font-family:'맑은 고딕',Arial,sans-serif;font-size:14px;line-height:2;color:#222">
-<p>"즉시 실행합시다"</p>
-<p>4M 변동점 관리 대시보드에 신규 변동점 등록이 1건 있습니다.</p>
+    return `<div style="${style}">
+<p>&quot;${_toEnt('즉시 실행합시다')}&quot;</p>
+<p>${_toEnt('4M 변동점 관리 대시보드에 신규 변동점 등록이 1건 있습니다.')}</p>
 ${linkHtml}
-<p>이상입니다.</p>
-<p>대시보드에서 자동으로 보냄</p>
+<p>${_toEnt('이상입니다.')}</p>
+<p>${_toEnt('대시보드에서 자동으로 보냄')}</p>
 </div>`;
   }
-  // type === 'reviewer'
-  return `<div style="font-family:'맑은 고딕',Arial,sans-serif;font-size:14px;line-height:2;color:#222">
-<p>"즉시 실행합시다"</p>
-<p>4M 변동점 관리 대시보드에 변동점 신규 등록이 있어 결재가 필요합니다.</p>
+  // type === 'reviewer' or 'approver'
+  return `<div style="${style}">
+<p>&quot;${_toEnt('즉시 실행합시다')}&quot;</p>
+<p>${_toEnt('4M 변동점 관리 대시보드에 변동점 신규 등록이 있어 결재가 필요합니다.')}</p>
 ${linkHtml}
-<p>이상입니다.</p>
-<p>변동점 관리 대시보드에서 자동으로 보냄</p>
+<p>${_toEnt('이상입니다.')}</p>
+<p>${_toEnt('변동점 관리 대시보드에서 자동으로 보냄')}</p>
 </div>`;
 }
 
@@ -5639,11 +5650,18 @@ async function sendEmailToFirstReviewer(rec) {
     const reviewers = rec.approvalLine?.reviewers || [];
     const first = reviewers.find(r => r.order === 1);
     if (!first?.id) return;
+    await sendEmailToPersonById(first.id);
+  } catch (e) {
+    console.warn('[메일] 검토자 발송 실패:', e.message);
+  }
+}
 
+async function sendEmailToPersonById(userId) {
+  try {
     const { data: user } = await _sb
       .from('users_profile')
       .select('email')
-      .eq('id', first.id)
+      .eq('id', userId)
       .maybeSingle();
 
     if (!user?.email) return;
@@ -5658,7 +5676,7 @@ async function sendEmailToFirstReviewer(rec) {
       })
     });
   } catch (e) {
-    console.warn('[메일] 검토자 발송 실패:', e.message);
+    console.warn('[메일] 발송 실패:', e.message);
   }
 }
 </script>
