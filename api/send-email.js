@@ -16,19 +16,23 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'to, subject, html 필드가 필요합니다.' });
   }
 
-  const smtpHost = process.env.SMTP_HOST || 'gw.ssautotech.co.kr';
-  const smtpPort = parseInt(process.env.SMTP_PORT || '587');
-  const smtpUser = process.env.SMTP_USER || 'ass';
-  const smtpPass = process.env.SMTP_PASS || 'whflq123!';
-  const smtpFrom = process.env.SMTP_FROM || `"4M 변동점 관리 대시보드" <${smtpUser}@ssautotech.co.kr>`;
+  const smtpHost = process.env.SMTP_HOST || 'asp.ewall.co.kr';
+  const smtpPort = parseInt(process.env.SMTP_PORT || '25');
+  const smtpUser = process.env.SMTP_USER || '';
+  const smtpPass = process.env.SMTP_PASS || '';
+  const smtpFrom = process.env.SMTP_FROM || '"4M 변동점 관리 대시보드" <noreply@ssautotech.co.kr>';
 
-  const transporter = nodemailer.createTransport({
+  const transportOpts = {
     host: smtpHost,
     port: smtpPort,
-    secure: smtpPort === 465,
-    auth: { user: smtpUser, pass: smtpPass },
+    secure: false,
     tls: { rejectUnauthorized: false }
-  });
+  };
+  if (smtpUser && smtpPass) {
+    transportOpts.auth = { user: smtpUser, pass: smtpPass };
+  }
+
+  const transporter = nodemailer.createTransport(transportOpts);
 
   try {
     const toList = Array.isArray(to) ? to.join(', ') : to;
