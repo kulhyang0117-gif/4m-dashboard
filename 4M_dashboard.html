@@ -1022,6 +1022,7 @@ body.view-mobile .tab-panel{overflow-y:auto !important;height:calc(100vh - 140px
         <div class="toolbar-title">변동점 등록 이력</div>
         <button class="btn btn-primary" onclick="openRegModal()">+ 변동점 등록</button>
         <button class="btn btn-outline" onclick="exportExcel()">📥 Excel 내보내기</button>
+        <button class="btn btn-outline" onclick="sendBatchPendingEmails()" style="background:#e8f5e9;border-color:#66bb6a;color:#2e7d32">📧 대기 중인 담당자에게 메일 발송</button>
       </div>
       <div class="filter-row">
         <select id="filterDept" onchange="renderHistory()">
@@ -5679,6 +5680,45 @@ async function sendEmailToPersonById(userId) {
   } catch (e) {
     console.warn('[메일] 발송 실패:', e.message);
   }
+}
+
+async function sendBatchPendingEmails() {
+  if (!confirm('현재 미결재 상태인 변동점들의 담당자에게 메일을 발송합니다. 계속하시겠습니까?')) return;
+
+  let sent = 0;
+  let skipped = 0;
+
+  for (const rec of records) {
+    const al = rec.approvalLine;
+    if (!al) { skipped++; continue; }
+
+    // 모든 결재 완료된 건은 건너뜀
+    const allReviewersSigned = (al.reviewers || []).every(r => r.signedAt);
+    if (allReviewersSigned && al.approver?.signedAt) { skipped++; continue; }
+
+    try {
+      if (!rec.qualityConfirm?.signedAt) {
+        // 품질검증 미완료 → 품질팀 전체 발송
+        await sendEmailToQualityTeam(rec);
+        sent++;
+      } else {
+        // 미서명 검토자 중 order가 가장 낮은 사람에게 발송
+        const reviewers = (al.reviewers || []).sort((a, b) => a.order - b.order);
+        const nextReviewer = reviewers.find(r => !r.signedAt);
+        if (nextReviewer) {
+          await sendEmailToPersonById(nextReviewer.id);
+          sent++;
+        } else if (al.approver && !al.approver.signedAt) {
+          await sendEmailToPersonById(al.approver.id);
+          sent++;
+        }
+      }
+    } catch (e) {
+      console.warn('[일괄메일] 발송 오류:', rec.id, e.message);
+    }
+  }
+
+  showToast(`✅ 메일 발송 완료 (발송: ${sent}건, 완료된 건 제외: ${skipped}건)`);
 }
 </script>
 
