@@ -5598,24 +5598,25 @@ function _toEnt(str) {
 
 function _buildEmailHtml(type) {
   const DASH_URL = 'https://4m-gray.vercel.app/';
-  const style = "font-family:'Malgun Gothic',Arial,sans-serif;font-size:14px;line-height:2;color:#222;padding:16px";
-  const linkHtml = `<p><a href="${DASH_URL}" style="color:#1565c0;font-weight:700">${DASH_URL}</a></p>`;
+  const style = "font-family:'Malgun Gothic',Arial,sans-serif;font-size:14px;line-height:1.8;color:#222;padding:16px";
+  const p = 'style="margin:0 0 16px 0"';
+  const linkHtml = `<p ${p}><a href="${DASH_URL}" style="color:#1565c0;font-weight:700">${DASH_URL}</a></p>`;
   if (type === 'quality') {
     return `<div style="${style}">
-<p>"즉시 실행합시다"</p>
-<p>4M 변동점 관리 대시보드에 신규 변동점 등록이 1건 있습니다.</p>
+<p ${p}>"즉시 실행합시다"</p>
+<p ${p}>4M 변동점 관리 대시보드에 신규 변동점 등록이 1건 있습니다.</p>
 ${linkHtml}
-<p>이상입니다.</p>
-<p>대시보드에서 자동으로 보냄</p>
+<p ${p}>이상입니다.</p>
+<p ${p}>대시보드에서 자동으로 보냄</p>
 </div>`;
   }
   // type === 'reviewer' or 'approver'
   return `<div style="${style}">
-<p>"즉시 실행합시다"</p>
-<p>4M 변동점 관리 대시보드에 변동점 신규 등록이 있어 결재가 필요합니다.</p>
+<p ${p}>"즉시 실행합시다"</p>
+<p ${p}>4M 변동점 관리 대시보드에 변동점 신규 등록이 있어 결재가 필요합니다.</p>
 ${linkHtml}
-<p>이상입니다.</p>
-<p>변동점 관리 대시보드에서 자동으로 보냄</p>
+<p ${p}>이상입니다.</p>
+<p ${p}>변동점 관리 대시보드에서 자동으로 보냄</p>
 </div>`;
 }
 
