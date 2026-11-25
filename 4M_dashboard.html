@@ -2005,11 +2005,10 @@ async function authLogin() {
   if (error || !profile) { showErr('이메일 또는 비밀번호가 올바르지 않습니다.'); return; }
   if (profile.status === 'pending') { showErr('승인 대기 중입니다. 관리자 승인 후 로그인 가능합니다.'); return; }
   if (profile.status === 'rejected') { showErr('가입이 거절되었습니다.'); return; }
-  // password_hash가 없는 기존 계정(최초 1회) - 비밀번호 설정
+  // password_hash가 없는 계정 - 관리자 초기화 또는 최초 가입 → 새 비밀번호 설정 화면으로
   if (!profile.password_hash) {
-    const pwHash = await _hashPw(pw);
-    await _sb.from('users_profile').update({ password_hash: pwHash }).eq('email', email).eq('system', '4m');
-    _currentUser = { ...profile, password_hash: pwHash };
+    authShowResetPw(profile);
+    return;
   } else {
     const pwHash = await _hashPw(pw);
     if (profile.password_hash !== pwHash) { showErr('이메일 또는 비밀번호가 올바르지 않습니다.'); return; }
@@ -2094,12 +2093,48 @@ async function doChangePw() {
 function authShowLogin() {
   document.getElementById('authLoginForm').style.display = '';
   document.getElementById('authSignupForm').style.display = 'none';
+  document.getElementById('authResetPwForm').style.display = 'none';
   document.getElementById('authError').style.display = 'none';
 }
 function authShowSignup() {
   document.getElementById('authLoginForm').style.display = 'none';
   document.getElementById('authSignupForm').style.display = '';
+  document.getElementById('authResetPwForm').style.display = 'none';
   document.getElementById('suError').style.display = 'none';
+}
+let _resetPwProfile = null;
+function authShowResetPw(profile) {
+  _resetPwProfile = profile;
+  document.getElementById('authLoginForm').style.display = 'none';
+  document.getElementById('authSignupForm').style.display = 'none';
+  document.getElementById('authResetPwForm').style.display = '';
+  document.getElementById('rpError').style.display = 'none';
+  document.getElementById('rpNewPw').value = '';
+  document.getElementById('rpConfirmPw').value = '';
+}
+async function authSetNewPw() {
+  const nw = document.getElementById('rpNewPw').value || '';
+  const cf = document.getElementById('rpConfirmPw').value || '';
+  const errEl = document.getElementById('rpError');
+  const showErr = msg => { errEl.textContent = msg; errEl.style.display = 'block'; };
+  if (!nw || !cf) { showErr('새 비밀번호를 입력하세요.'); return; }
+  if (nw.length < 6) { showErr('비밀번호는 6자 이상이어야 합니다.'); return; }
+  if (nw !== cf) { showErr('비밀번호가 일치하지 않습니다.'); return; }
+  showErr('처리 중...');
+  const pwHash = await _hashPw(nw);
+  const { error } = await _sb.from('users_profile').update({ password_hash: pwHash }).eq('id', _resetPwProfile.id);
+  if (error) { showErr('오류: ' + error.message); return; }
+  _currentUser = { ..._resetPwProfile, password_hash: pwHash };
+  _resetPwProfile = null;
+  sessionStorage.setItem('4m_user', JSON.stringify(_currentUser));
+  _allApprovedUsers = [];
+  document.getElementById('authOverlay').style.display = 'none';
+  errEl.style.display = 'none';
+  _updateAuthBar();
+  await sbLoad();
+  renderAll();
+  sbLoadBom();
+  showToast('✅ 새 비밀번호가 설정되었습니다. 환영합니다!');
 }
 function _showToast(msg, color) {
   let t = document.getElementById('_adminToast');
@@ -2207,6 +2242,7 @@ async function loadUsersFromSupabase() {
       ? `<button onclick="approveUser('${u.id}')" style="background:#28a745;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">승인</button><button onclick="rejectUser('${u.id}')" style="background:#e74c3c;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">거절</button>`
       : '';
     const deleteBtn = `<button onclick="deleteUserSb('${u.id}')" style="background:#888;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;margin-left:4px;">삭제</button>`;
+    const resetPwBtn = u.status === 'approved' ? `<button onclick="resetUserPassword('${u.id}','${esc(u.name||'')}')" style="background:#e65100;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;margin-left:4px;">🔑 비번초기화</button>` : '';
     const sendEmailInput = `<input type="email" value="${esc(u.send_email || u.email || '')}"
       style="font-size:11px;border:1px solid #ddd;border-radius:4px;padding:3px 6px;width:160px;"
       onchange="updateUserField('${u.id}','send_email',this.value)"
@@ -2220,7 +2256,7 @@ async function loadUsersFromSupabase() {
       <td style="padding:8px 10px;text-align:center;">${roleSelect}</td>
       <td style="padding:8px 10px;text-align:center;color:${statusColor};font-weight:700;">${statusText}</td>
       <td style="padding:8px 10px;text-align:center;font-size:11px;color:#aaa;">${(u.created_at || '').substring(0, 10)}</td>
-      <td style="padding:8px 10px;text-align:center;">${actions}${deleteBtn}</td>
+      <td style="padding:8px 10px;text-align:center;">${actions}${resetPwBtn}${deleteBtn}</td>
     </tr>`;
   }).join('');
 }
@@ -2239,6 +2275,13 @@ async function rejectUser(id) {
 async function deleteUserSb(id) {
   if (!confirm('이 사용자를 삭제하시겠습니까?')) return;
   await _sb.from('users_profile').delete().eq('id', id);
+  loadUsersFromSupabase();
+}
+async function resetUserPassword(id, name) {
+  if (!confirm(`"${name}" 회원의 비밀번호를 초기화하시겠습니까?\n초기화 후 해당 회원은 다음 로그인 시 새 비밀번호를 직접 설정해야 합니다.`)) return;
+  const { error } = await _sb.from('users_profile').update({ password_hash: null }).eq('id', id);
+  if (error) { showToast('❌ 초기화 실패: ' + error.message); return; }
+  showToast('✅ ' + name + ' 회원의 비밀번호가 초기화되었습니다.');
   loadUsersFromSupabase();
 }
 
@@ -5801,6 +5844,17 @@ async function sendBatchPendingEmails() {
       <div id="suError" class="auth-err"></div>
       <button class="auth-btn" onclick="authSignup()">가입 신청</button>
       <div class="auth-link" onclick="authShowLogin()">로그인으로 돌아가기</div>
+    </div>
+    <div id="authResetPwForm" style="display:none">
+      <div style="background:#fff3e0;border:1px solid #ff9800;border-radius:6px;padding:10px 13px;margin-bottom:14px;font-size:12px;color:#e65100;line-height:1.6">
+        🔑 관리자가 비밀번호를 초기화했습니다.<br>새 비밀번호를 설정해주세요.
+      </div>
+      <label class="auth-label">새 비밀번호 (6자 이상)</label>
+      <input id="rpNewPw" type="password" class="auth-input" placeholder="새 비밀번호 입력">
+      <label class="auth-label">새 비밀번호 확인</label>
+      <input id="rpConfirmPw" type="password" class="auth-input" placeholder="새 비밀번호 다시 입력" onkeydown="if(event.key==='Enter')authSetNewPw()">
+      <div id="rpError" class="auth-err"></div>
+      <button class="auth-btn" onclick="authSetNewPw()">비밀번호 설정 완료</button>
     </div>
   </div>
 </div>
